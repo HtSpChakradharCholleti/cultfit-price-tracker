@@ -17,6 +17,8 @@ from app.services.pricing_service import (
     get_latest_prices,
     get_plan_history,
     calculate_effective_price,
+    calculate_monthly_cost,
+    calculate_effective_monthly_cost,
 )
 from app.models.plan_offer import OfferData, sync_plan_offers, list_plan_offers, list_offer_history
 from app.scraper.cultfit import CultFitScraper, PlanData, ScrapingResult
@@ -236,3 +238,43 @@ def test_effective_price_separates_discount_types():
     assert result["instant_discount"] == 2500
     assert result["cashback"] == 1200
     assert result["potential_effective_price"] == 14450
+
+
+def test_coupon_is_not_applied_without_verified_applicability():
+    result = calculate_effective_price(
+        16950,
+        [
+            {
+                "category": "Instant discount",
+                "discount_type": "fixed",
+                "discount_value": 2500,
+                "is_conditional": False,
+            },
+            {
+                "category": "Coupon",
+                "discount_type": "fixed",
+                "discount_value": 1200,
+                "coupon_code": "CULT1200",
+                "is_conditional": True,
+            },
+        ],
+    )
+    assert result["instant_discounted_price"] == 14450
+    assert result["potential_effective_price"] == 14450
+    assert result["excluded_benefit_count"] == 1
+    assert calculate_effective_monthly_cost(result, 12) == 1204.17
+
+
+def test_monthly_costs_use_plan_duration():
+    assert calculate_monthly_cost(16950, 12) == 1412.5
+    assert calculate_monthly_cost(16950, 0) is None
+    assert calculate_monthly_cost(16950, None) is None
+
+    effective = {
+        "advertised_price": 16950,
+        "instant_discount": 2500,
+        "conditional_discount": 900,
+        "cashback": 1200,
+        "potential_effective_price": 13550,
+    }
+    assert calculate_effective_monthly_cost(effective, 12) == 1204.17

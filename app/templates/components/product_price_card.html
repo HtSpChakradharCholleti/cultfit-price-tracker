@@ -1,6 +1,6 @@
 <div class="card price-card" id="priceCard">
   <div class="card-header">
-    <span class="plan-name">{{ selected_plan.name if selected_plan else '—' }}</span>
+    <span class="plan-name">Price summary</span>
     <span class="tier-badge tier-{{ (selected_plan.tier|lower) if selected_plan else '' }}">
       {{ selected_plan.tier if selected_plan else '' }}
     </span>
@@ -8,6 +8,19 @@
   <div class="card-body">
     {% if selected_price %}
     <div class="price-main">₹{{ selected_price.selling_price | format_inr }}</div>
+    {% if history|length > 1 %}
+    {% set previous_price = history[-2] %}
+    {% set price_delta = selected_price.selling_price - previous_price.selling_price %}
+    <div class="price-change {{ 'text-success' if price_delta < 0 else 'text-danger' if price_delta > 0 else 'text-muted' }}">
+      <span>Previous price: ₹{{ previous_price.selling_price | format_inr }}</span>
+      {% if price_delta < 0 %}↓ ₹{{ price_delta | abs | format_inr }}{% elif price_delta > 0 %}↑ ₹{{ price_delta | format_inr }}{% else %}No change{% endif %}
+    </div>
+    {% else %}
+    <div class="price-change text-muted">Previous price: Not enough history</div>
+    {% endif %}
+    {% if selected_price.monthly_cost is not none %}
+    <div class="monthly-cost">Regular monthly cost: ₹{{ selected_price.monthly_cost | format_inr_decimal }}/month</div>
+    {% endif %}
     {% if selected_price.original_price > selected_price.selling_price %}
     <div class="price-mrp">MRP ₹{{ selected_price.original_price | format_inr }}</div>
     {% endif %}
@@ -32,20 +45,15 @@
       {% if effective_price.potential_effective_price is not none %}
       <div class="price-effective">Potential effective price: ₹{{ effective_price.potential_effective_price | format_inr }}</div>
       {% endif %}
-    </div>
-    {% endif %}
-    {% if selected_offers %}
-    <div class="offer-list">
-      {% for offer in selected_offers %}
-      <div class="offer-item">
-        <strong>{{ offer.title or 'Offer' }}</strong>
-        {% if offer.description and offer.description != offer.title %}
-        <span>{{ offer.description }}</span>
-        {% endif %}
-        {% if offer.coupon_code %}<code>{{ offer.coupon_code }}</code>{% endif %}
-        <small>{{ offer.category or 'Other' }}</small>
+      {% if effective_price.effective_monthly_cost is not none %}
+      <div class="effective-monthly-breakdown">
+        <span>After instant discount:</span>
+        <span>(₹{{ effective_price.advertised_price | format_inr }} − ₹{{ effective_price.instant_discount | format_inr }}) ÷ {{ selected_plan.duration_months }} = ₹{{ effective_price.effective_monthly_cost | format_inr_decimal }}/month</span>
       </div>
-      {% endfor %}
+      {% endif %}
+      {% if effective_price.excluded_benefit_count %}
+      <div class="text-muted benefit-note">Coupons and non-monetary benefits are excluded from this calculation.</div>
+      {% endif %}
     </div>
     {% endif %}
     <div class="observed-at text-muted">Last seen: {{ selected_price.observed_at | format_dt }}</div>

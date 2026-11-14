@@ -11,6 +11,7 @@ let currentDays = 7;
 let _tableData = [];
 let _sortKey = 'observed_at';
 let _sortAsc = false; // newest first by default
+const mobileChart = window.matchMedia('(max-width: 600px)');
 
 /* ------------------------------------------------------------------ */
 /* 1. Plan Selection                                                     */
@@ -23,12 +24,36 @@ function selectPlan(planId) {
 
   // Update tracked state
   window.TRACKER_DATA.selectedPlanId = planId;
+  updateSelectedPlanLabel(planId);
+  setPlanSelectorOpen(false);
 
   // Push URL change without reload
   history.pushState({ planId }, '', `?plan=${planId}`);
 
   // Load data for the newly selected plan
   loadPlanData(planId, currentDays);
+}
+
+function updateSelectedPlanLabel(planId) {
+  const label = document.getElementById('selectedPlanLabel');
+  const plan = (window.TRACKER_DATA.plansJson || []).find(p => p.id === planId);
+  if (label && plan) {
+    label.textContent = `${plan.name} · ${plan.duration_label}`;
+  }
+}
+
+function setPlanSelectorOpen(isOpen) {
+  const panel = document.getElementById('planSelectorPanel');
+  const button = document.getElementById('changePlanBtn');
+  if (!panel || !button) return;
+  panel.hidden = !isOpen;
+  button.setAttribute('aria-expanded', String(isOpen));
+  button.textContent = isOpen ? 'Close plans' : 'Change plan';
+}
+
+function togglePlanSelector() {
+  const panel = document.getElementById('planSelectorPanel');
+  if (panel) setPlanSelectorOpen(panel.hidden);
 }
 
 /* ------------------------------------------------------------------ */
@@ -49,6 +74,7 @@ async function loadPlanData(planId, days = null) {
     _tableData = historyData || [];
 
     updatePriceCard(historyData, statsData, planId, offerData);
+    updateOffersPanel(offerData?.offers || []);
     updateStatsCard(statsData);
     initChart(historyData);
     renderTable(historyData, statsData);
@@ -107,13 +133,67 @@ function renderOfferHistory(historyData) {
 /* ------------------------------------------------------------------ */
 /* 3. Price Card Update (dynamic, after plan switch)                     */
 /* ------------------------------------------------------------------ */
+function renderOfferItem(offer) {
+  const category = String(offer.category || 'Other').toLowerCase().replace(/\s+/g, '-');
+  let html = `<div class="offer-item" data-category="${escapeHtml(category)}"><strong>${escapeHtml(offer.title || 'Offer')}</strong>`;
+  if (offer.description && offer.description !== offer.title) {
+    html += `<span>${escapeHtml(offer.description)}</span>`;
+  }
+  if (offer.coupon_code) {
+    html += `<code>${escapeHtml(offer.coupon_code)}</code>`;
+  }
+  return `${html}<small>${escapeHtml(offer.category || 'Other')}</small></div>`;
+}
+
+function updateOffersPanel(offers) {
+  const body = document.getElementById('offersBody');
+  const count = document.getElementById('offersCount');
+  const sectionToggle = document.getElementById('offersSectionToggle');
+  if (!body || !count || !sectionToggle) return;
+
+  count.textContent = offers.length ? `${offers.length} available` : '';
+  body.hidden = true;
+  sectionToggle.setAttribute('aria-expanded', 'false');
+  sectionToggle.textContent = 'Show offers';
+
+  if (!offers.length) {
+    body.innerHTML = '<div class="no-data">No offers available for this plan.</div>';
+    return;
+  }
+
+  const preview = offers.slice(0, 3).map(renderOfferItem).join('');
+  const extra = offers.slice(3).map(renderOfferItem).join('');
+  body.innerHTML = `
+    <div id="offerPreviewList" class="offer-list">${preview}</div>
+    ${extra ? `<div id="offerExtraList" class="offer-list" hidden>${extra}</div>
+      <button class="offers-all-toggle" type="button" aria-expanded="false"
+              onclick="toggleAllOffers(this)">View all ${offers.length} offers</button>` : ''}`;
+}
+
+function toggleOffersSection(button) {
+  const body = document.getElementById('offersBody');
+  if (!body) return;
+  const isOpen = !body.hidden;
+  body.hidden = isOpen;
+  button.setAttribute('aria-expanded', String(!isOpen));
+  button.textContent = isOpen ? 'Show offers' : 'Hide offers';
+}
+
+function toggleAllOffers(button) {
+  const extra = document.getElementById('offerExtraList');
+  if (!extra) return;
+  const isOpen = !extra.hidden;
+  extra.hidden = isOpen;
+  button.setAttribute('aria-expanded', String(!isOpen));
+  button.textContent = isOpen ? 'View all offers' : 'Hide extra offers';
+}
+
 function updatePriceCard(historyData, stats, planId, offerData = {}) {
   const card = document.getElementById('priceCard');
   if (!card) return;
 
   // Find the plan info
   const plan = (window.TRACKER_DATA.plansJson || []).find(p => p.id === planId);
-  const planName = plan ? plan.name : '—';
   const tier = plan ? plan.tier : '';
 
   // Latest price is the newest observation by timestamp
@@ -124,7 +204,7 @@ function updatePriceCard(historyData, stats, planId, offerData = {}) {
   const header = card.querySelector('.card-header');
   if (header) {
     header.innerHTML = `
-      <span class="plan-name">${escapeHtml(planName)}</span>
+      <span class="plan-name">Price summary</span>
       <span class="tier-badge tier-${tier.toLowerCase()}">${escapeHtml(tier)}</span>
     `;
   }
@@ -144,6 +224,29 @@ function updatePriceCard(historyData, stats, planId, offerData = {}) {
   const minFmt = stats && stats.min_price ? formatINR(stats.min_price) : null;
 
   let html = `<div class="price-main">₹${sellingFmt}</div>`;
+  const monthlyCost = latest.monthly_cost ?? calculateMonthlyCost(
+    latest.selling_price,
+    plan?.duration_months,
+  );
+  if (monthlyCost !== null) {
+    html += `<div class="monthly-cost">Regular monthly cost: ₹${formatINRDecimal(monthlyCost)}/month</div>`;
+  }
+
+  const previous = historyData && historyData.length > 1
+    ? historyData.slice().sort((a, b) => new Date(b.observed_at) - new Date(a.observed_at))[1]
+    : null;
+  if (previous) {
+    const delta = latest.selling_price - previous.selling_price;
+    const changeClass = delta < 0 ? 'text-success' : delta > 0 ? 'text-danger' : 'text-muted';
+    const changeText = delta < 0
+      ? `↓ ₹${formatINR(Math.abs(delta))}`
+      : delta > 0
+        ? `↑ ₹${formatINR(delta)}`
+        : 'No change';
+    html += `<div class="price-change ${changeClass}"><span>Previous price: ₹${formatINR(previous.selling_price)}</span>${changeText}</div>`;
+  } else {
+    html += '<div class="price-change text-muted">Previous price: Not enough history</div>';
+  }
 
   if (latest.original_price > latest.selling_price) {
     html += `<div class="price-mrp">MRP ₹${mrpFmt}</div>`;
@@ -153,21 +256,7 @@ function updatePriceCard(historyData, stats, planId, offerData = {}) {
     html += `<div class="discount-badge">${discount.toFixed(1)}% OFF</div>`;
   }
 
-  const offers = offerData.offers || [];
-  if (offers.length > 0) {
-    html += '<div class="offer-list">';
-    for (const offer of offers) {
-      html += `<div class="offer-item"><strong>${escapeHtml(offer.title || 'Offer')}</strong>`;
-      if (offer.description && offer.description !== offer.title) {
-        html += `<span>${escapeHtml(offer.description)}</span>`;
-      }
-      if (offer.coupon_code) {
-        html += `<code>${escapeHtml(offer.coupon_code)}</code>`;
-      }
-      html += `<small>${escapeHtml(offer.category || 'Other')}</small></div>`;
-    }
-    html += '</div>';
-  } else if (latest.offer_description) {
+  if (latest.offer_description) {
     html += `<div class="offer-text">🎁 ${escapeHtml(latest.offer_description)}</div>`;
   }
 
@@ -185,6 +274,17 @@ function updatePriceCard(historyData, stats, planId, offerData = {}) {
     }
     if (effective.potential_effective_price !== null) {
       html += `<div class="price-effective">Potential effective price: ₹${formatINR(effective.potential_effective_price)}</div>`;
+    }
+    if (effective.effective_monthly_cost != null) {
+      const duration = Number(plan?.duration_months);
+      if (effective.advertised_price != null && Number.isFinite(duration) && duration > 0) {
+        html += `<div class="effective-monthly-breakdown"><span>After instant discount:</span><span>(₹${formatINR(effective.advertised_price)} − ₹${formatINR(effective.instant_discount || 0)}) ÷ ${duration} = ₹${formatINRDecimal(effective.effective_monthly_cost)}/month</span></div>`;
+      } else {
+        html += `<div class="price-effective">Effective monthly cost: ₹${formatINRDecimal(effective.effective_monthly_cost)}</div>`;
+      }
+    }
+    if (effective.excluded_benefit_count > 0) {
+      html += '<div class="text-muted benefit-note">Coupons and non-monetary benefits are excluded from this calculation.</div>';
     }
     html += '</div>';
   }
@@ -308,12 +408,12 @@ function initChart(historyData) {
 
   if (!historyData || historyData.length === 0) {
     if (noData) noData.style.display = 'flex';
-    canvas.style.display = 'none';
+    canvas.parentElement.style.display = 'none';
     return;
   }
 
   if (noData) noData.style.display = 'none';
-  canvas.style.display = 'block';
+  canvas.parentElement.style.display = '';
 
   // Sort chronologically ascending for the chart timeline
   const sorted = historyData.slice().sort((a, b) => new Date(a.observed_at) - new Date(b.observed_at));
@@ -358,7 +458,7 @@ function initChart(historyData) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          labels: { color: '#e2e8f0', font: { family: 'Inter', size: 12 } },
+          labels: { color: '#e2e8f0', boxWidth: 20, font: { family: 'Inter', size: 12 } },
         },
         tooltip: {
           backgroundColor: '#1a1d2e',
@@ -373,7 +473,16 @@ function initChart(historyData) {
       },
       scales: {
         x: {
-          ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, maxTicksLimit: 8 },
+          ticks: {
+            color: '#94a3b8',
+            font: { family: 'Inter', size: 11 },
+            maxTicksLimit: mobileChart.matches ? 3 : 8,
+            maxRotation: mobileChart.matches ? 0 : 50,
+            callback(value) {
+              const label = this.getLabelForValue(value);
+              return mobileChart.matches ? label.split(',')[0] : label;
+            },
+          },
           grid: { color: '#2d3148' },
         },
         y: {
@@ -399,7 +508,7 @@ function renderTable(historyData, statistics) {
   if (!tbody) return;
 
   if (!historyData || historyData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No observations yet. Click Refresh Price to start tracking.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No observations yet. Click Refresh Price to start tracking.</td></tr>';
     if (countEl) countEl.textContent = '';
     return;
   }
@@ -424,19 +533,38 @@ function renderTable(historyData, statistics) {
     const isLow = minPrice != null && obs.selling_price <= minPrice * 1.02;
     const isHigh = maxPrice != null && obs.selling_price >= maxPrice * 0.98;
     const priceClass = isLow ? 'text-success' : isHigh ? 'text-danger' : 'text-warning';
-    const tier = obs.tier || '';
+    const monthlyCost = obs.monthly_cost ?? calculateMonthlyCost(obs.selling_price, obs.duration_months);
     return `<tr>
       <td>${formatDateIST(obs.observed_at)}</td>
-      <td>${escapeHtml(obs.plan_name || '—')}</td>
-      <td><span class="tier-badge tier-${tier.toLowerCase()}">${escapeHtml(tier || '—')}</span></td>
       <td>₹${formatINR(obs.original_price)}</td>
-      <td class="price-cell ${priceClass}">₹${formatINR(obs.selling_price)}</td>
+      <td class="price-cell selling-price ${priceClass}">₹${formatINR(obs.selling_price)}</td>
       <td>${(obs.discount_percentage || 0).toFixed(1)}%</td>
-      <td class="offer-cell">${escapeHtml(obs.offer_description || '—')}</td>
+      <td class="monthly-cost-cell">${monthlyCost === null ? '—' : `₹${formatINRDecimal(monthlyCost)}`}</td>
+      <td class="offer-cell">${renderObservationOffer(obs.offer_description)}</td>
     </tr>`;
   }).join('');
 
   if (countEl) countEl.textContent = `${historyData.length} records`;
+}
+
+function renderObservationOffer(description) {
+  if (!description) return '<span class="offer-count-empty">0 offers</span>';
+  const text = String(description);
+  const count = Math.max(1, text.split(/\s*(?:\||;|\n)\s*/).filter(Boolean).length);
+  const label = `${count} offer${count === 1 ? '' : 's'}`;
+  return `<details class="offer-details">
+    <summary>${label}</summary>
+    <span>${escapeHtml(text)}</span>
+  </details>`;
+}
+
+function calculateMonthlyCost(price, durationMonths) {
+  const duration = Number(durationMonths);
+  const numericPrice = Number(price);
+  if (!Number.isFinite(numericPrice) || !Number.isFinite(duration) || duration <= 0) {
+    return null;
+  }
+  return Math.round((numericPrice / duration) * 100) / 100;
 }
 
 /* ------------------------------------------------------------------ */
@@ -476,11 +604,13 @@ function updateStatsCard(stats) {
   }
 
   const vsMinAbsClass = (stats.vs_min_abs > 0) ? 'text-warning' : 'text-success';
-  const vsMinPctClass = (stats.vs_min_pct > 0) ? 'text-warning' : 'text-success';
   const vsMinAbsPrefix = stats.vs_min_abs > 0 ? '+' : '';
-  const vsMinPctPrefix = stats.vs_min_pct > 0 ? '+' : '';
 
   let html = `<div class="stats-grid">
+    <div class="stat-item stat-current">
+      <div class="stat-value text-primary">₹${formatINR(stats.current_price)}</div>
+      <div class="stat-label">Current Price</div>
+    </div>
     <div class="stat-item">
       <div class="stat-value text-success">₹${formatINR(stats.min_price)}</div>
       <div class="stat-label">All-time Low</div>
@@ -503,10 +633,6 @@ function updateStatsCard(stats) {
     <div class="stat-item">
       <div class="stat-value ${vsMinAbsClass}">${vsMinAbsPrefix}₹${formatINR(Math.abs(stats.vs_min_abs))}</div>
       <div class="stat-label">vs Historical Low (₹)</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-value ${vsMinPctClass}">${vsMinPctPrefix}${Number(stats.vs_min_pct).toFixed(1)}%</div>
-      <div class="stat-label">vs Historical Low (%)</div>
     </div>`;
   }
 
@@ -540,7 +666,7 @@ function showToast(message, type = 'success') {
 /* ------------------------------------------------------------------ */
 function setupTableSorting() {
   document.querySelectorAll('.data-table th.sortable').forEach(th => {
-    th.addEventListener('click', () => {
+    const sort = () => {
       const key = th.dataset.sort;
       if (!key) return;
 
@@ -557,12 +683,19 @@ function setupTableSorting() {
         if (h === th) {
           h.textContent = `${baseText} ${_sortAsc ? '↑' : '↓'}`;
         } else {
-          h.textContent = `${baseText} ↕`;
+          h.textContent = baseText;
         }
       });
 
       // Re-render with current data
       renderTable(_tableData, null);
+    };
+    th.addEventListener('click', sort);
+    th.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        sort();
+      }
     });
   });
 }
@@ -583,12 +716,29 @@ function setupDateFilters() {
   });
 }
 
+function updateTableScrollHints() {
+  document.querySelectorAll('.table-wrapper').forEach(wrapper => {
+    const hint = wrapper.previousElementSibling;
+    if (hint?.classList.contains('table-scroll-hint')) {
+      hint.hidden = wrapper.scrollWidth <= wrapper.clientWidth;
+    }
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* 11. Utilities                                                         */
 /* ------------------------------------------------------------------ */
 function formatINR(amount) {
   if (amount === null || amount === undefined) return '—';
   return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount);
+}
+
+function formatINRDecimal(amount) {
+  if (amount === null || amount === undefined || !Number.isFinite(Number(amount))) return '—';
+  return new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(amount));
 }
 
 function formatDateIST(utcStr) {
@@ -622,6 +772,7 @@ window.addEventListener('popstate', event => {
   const planId = event.state?.planId;
   if (planId) {
     window.TRACKER_DATA.selectedPlanId = planId;
+    updateSelectedPlanLabel(planId);
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.classList.toggle('active', Number(btn.dataset.planId) === planId);
     });
@@ -635,6 +786,14 @@ window.addEventListener('popstate', event => {
 document.addEventListener('DOMContentLoaded', () => {
   setupDateFilters();
   setupTableSorting();
+  updateTableScrollHints();
+  window.addEventListener('resize', updateTableScrollHints);
+  mobileChart.addEventListener('change', event => {
+    if (!chartInstance) return;
+    chartInstance.options.scales.x.ticks.maxTicksLimit = event.matches ? 3 : 8;
+    chartInstance.options.scales.x.ticks.maxRotation = event.matches ? 0 : 50;
+    chartInstance.update('none');
+  });
 
   // Check for plan override in URL first
   const params = new URLSearchParams(location.search);
@@ -652,6 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (initialPlanId) {
+    updateSelectedPlanLabel(initialPlanId);
     loadPlanData(initialPlanId, currentDays);
   }
 });

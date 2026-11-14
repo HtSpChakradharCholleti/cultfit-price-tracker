@@ -41,6 +41,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+img, canvas {
+  max-width: 100%;
+}
+
 a {
   color: var(--color-primary);
   text-decoration: none;
@@ -57,11 +61,9 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.875rem 1.5rem;
+  padding: 0.75rem 1rem;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
   z-index: 100;
   flex-wrap: wrap;
 }
@@ -70,6 +72,7 @@ button {
   display: flex;
   align-items: center;
   gap: 0.625rem;
+  min-width: 0;
 }
 
 .brand-icon {
@@ -78,14 +81,15 @@ button {
 }
 
 .header-brand h1 {
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 700;
   background: linear-gradient(135deg, var(--color-primary) 0%, #a78bfa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.02em;
-  white-space: nowrap;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .header-meta {
@@ -93,11 +97,33 @@ button {
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.header-plan {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.header-plan .eyebrow {
+  flex: 0 0 auto;
+}
+
+.header-plan #selectedPlanLabel {
+  margin: 0;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .last-scraped {
   font-size: 0.8rem;
   color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 
 /* ---------- Refresh Button ---------- */
@@ -105,6 +131,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  min-height: 44px;
   padding: 0.45rem 1rem;
   background: var(--color-primary);
   color: #fff;
@@ -169,37 +196,90 @@ button {
 }
 
 /* ---------- Plan Selector ---------- */
-.plan-selector {
+.plan-toolbar {
   display: flex;
-  align-items: flex-start;
-  gap: 2rem;
-  padding: 1rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
 }
 
-.plan-selector::-webkit-scrollbar {
-  height: 4px;
+.plan-toolbar > div {
+  min-width: 0;
 }
 
-.plan-selector::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
+.eyebrow {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#selectedPlanLabel {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.change-plan-btn {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.change-plan-btn:hover {
+  background: rgba(108, 99, 255, 0.12);
+}
+
+.plan-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-selector[hidden] {
+  display: none;
+}
+
+.selector-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.selector-heading .text-muted {
+  font-size: 0.75rem;
+  font-weight: 400;
 }
 
 .tier-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .tier-label {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -212,10 +292,12 @@ button {
 .duration-tabs {
   display: flex;
   gap: 0.4rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
+  min-height: 44px;
+  max-width: 100%;
   padding: 0.35rem 0.85rem;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
@@ -224,7 +306,7 @@ button {
   font-size: 0.8rem;
   font-weight: 500;
   transition: all var(--transition);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .tab-btn:hover {
@@ -244,28 +326,59 @@ button {
 .main-content {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
+  gap: 1rem;
+}
+
+.kpi-section,
+.analytics-grid {
+  min-width: 0;
+}
+
+.kpi-section .card-header {
+  padding-block: 0.65rem;
+}
+
+.kpi-section .card-body {
+  padding: 0.75rem;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
   gap: 1.5rem;
+  align-items: start;
+}
+
+.analytics-grid > * {
+  min-width: 0;
+}
+
+.summary-section,
+.chart-section {
+  align-self: start;
 }
 
 .content-grid {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
   align-items: start;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+  min-width: 0;
 }
 
 .chart-section {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 /* ---------- Card ---------- */
@@ -274,15 +387,16 @@ button {
   border: 1px solid var(--border);
   border-radius: var(--border-radius);
   overflow: hidden;
+  min-width: 0;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.875rem 1.25rem;
+  padding: 0.875rem 1rem;
   border-bottom: 1px solid var(--border);
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   color: var(--text-primary);
   gap: 0.75rem;
@@ -290,7 +404,9 @@ button {
 }
 
 .card-body {
-  padding: 1.25rem;
+  padding: 1rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* ---------- Price Card ---------- */
@@ -300,12 +416,34 @@ button {
 }
 
 .price-card .price-main {
-  font-size: 3rem;
+  font-size: clamp(2rem, 8vw, 3rem);
   font-weight: 700;
   color: var(--color-primary);
   line-height: 1.1;
   margin-bottom: 0.4rem;
   letter-spacing: -0.02em;
+}
+
+.price-change {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  margin: 0.15rem 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.price-change span {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.monthly-cost {
+  margin: 0.35rem 0 0.65rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .price-card .price-mrp {
@@ -332,6 +470,10 @@ button {
   color: var(--color-warning);
   font-style: italic;
   margin-bottom: 0.5rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .observed-at {
@@ -388,20 +530,25 @@ button {
 /* ---------- Statistics Card ---------- */
 .stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .stat-item {
   text-align: center;
-  padding: 0.75rem 0.5rem;
+  padding: 0.6rem 0.5rem;
   background: var(--bg-elevated);
   border-radius: 8px;
   border: 1px solid var(--border);
 }
 
+.stat-current {
+  border-color: rgba(108, 99, 255, 0.55);
+  background: rgba(108, 99, 255, 0.1);
+}
+
 .stat-value {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 0.2rem;
@@ -409,7 +556,7 @@ button {
 }
 
 .stat-label {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -433,21 +580,30 @@ button {
 
 /* ---------- Chart Card ---------- */
 .chart-card {
-  height: 100%;
+  height: auto;
 }
 
 .chart-container {
   position: relative;
-  height: 350px;
+  height: 260px;
   width: 100%;
+}
+
+.chart-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .date-filter-btns {
   display: flex;
   gap: 0.3rem;
+  flex-wrap: wrap;
 }
 
 .filter-btn {
+  min-width: 44px;
+  min-height: 44px;
   padding: 0.25rem 0.6rem;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
@@ -474,7 +630,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 350px;
+  height: 260px;
   color: var(--text-muted);
   font-size: 0.875rem;
   text-align: center;
@@ -482,11 +638,24 @@ button {
 }
 
 /* ---------- Table Card ---------- */
+.table-scroll-hint {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
 .table-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+}
+
+.table-wrapper:focus-visible,
+button:focus-visible,
+th.sortable:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
 }
 
 .table-wrapper::-webkit-scrollbar {
@@ -511,7 +680,7 @@ button {
 
 .data-table th {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: 0.9rem 1rem;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-muted);
@@ -532,7 +701,7 @@ button {
 }
 
 .data-table td {
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 1rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-primary);
   vertical-align: middle;
@@ -550,10 +719,41 @@ button {
   font-weight: 600;
 }
 
+.selling-price {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.monthly-cost-cell {
+  color: var(--text-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .offer-cell {
   color: var(--text-muted);
   font-size: 0.8rem;
   max-width: 220px;
+}
+
+.offer-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-primary);
+  font-weight: 600;
+  list-style-position: inside;
+}
+
+.offer-details span {
+  display: block;
+  max-width: 260px;
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.offer-count-empty {
+  color: var(--text-muted);
 }
 
 .empty-state {
@@ -566,8 +766,9 @@ button {
 /* ---------- Toast ---------- */
 .toast-container {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  bottom: 1rem;
+  right: 1rem;
+  left: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -586,7 +787,8 @@ button {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   animation: toastIn 0.25s ease forwards;
   min-width: 220px;
-  max-width: 360px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .toast.success {
@@ -652,93 +854,6 @@ button {
   text-align: center;
 }
 
-/* ---------- Responsive ---------- */
-@media (max-width: 1024px) {
-  .content-grid {
-    grid-template-columns: 280px 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-header {
-    padding: 0.75rem 1rem;
-  }
-
-  .header-brand h1 {
-    font-size: 1rem;
-  }
-
-  .last-scraped {
-    display: none;
-  }
-
-  .plan-selector {
-    padding: 0.75rem 1rem;
-    gap: 1.25rem;
-  }
-
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    order: 1;
-  }
-
-  .chart-section {
-    order: 0;
-  }
-
-  .main-content {
-    padding: 1rem;
-    gap: 1rem;
-  }
-
-  .price-card .price-main {
-    font-size: 2.25rem;
-  }
-
-  .chart-container {
-    height: 260px;
-  }
-
-  .no-chart-data {
-    height: 260px;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-  }
-
-  .stat-value {
-    font-size: 0.95rem;
-  }
-
-  .toast-container {
-    bottom: 1rem;
-    right: 1rem;
-    left: 1rem;
-  }
-
-  .toast {
-    max-width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-meta {
-    gap: 0.5rem;
-  }
-
-  .plan-selector {
-    gap: 1rem;
-  }
-
-  .price-card .price-main {
-    font-size: 2rem;
-  }
-}
 /* Offer and effective-price details */
 .price-breakdown,
 .offer-list {
@@ -753,6 +868,25 @@ button {
   color: #e2e8f0;
 }
 
+.effective-monthly-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.effective-monthly-breakdown span:last-child {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.benefit-note {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .offer-item {
   display: flex;
   flex-direction: column;
@@ -763,14 +897,245 @@ button {
   font-size: 0.85rem;
 }
 
+.offer-item[data-category*="instant"] {
+  border-left-color: var(--color-success);
+}
+
+.offer-item[data-category*="coupon"] {
+  border-left-color: var(--color-primary);
+}
+
+.offer-item[data-category*="emi"] {
+  border-left-color: var(--color-warning);
+}
+
 .offer-item span,
 .offer-item small {
   color: #94a3b8;
 }
 
+.offer-preview .offer-item span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 .offer-item code {
   width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding: 0.1rem 0.35rem;
   color: #e2e8f0;
   background: #2d3148;
+}
+
+.offers-card {
+  align-self: start;
+}
+
+.offers-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.offers-body {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.section-toggle,
+.offers-all-toggle {
+  min-height: 36px;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.section-toggle {
+  min-height: 40px;
+}
+
+.section-toggle:hover,
+.offers-all-toggle:hover {
+  background: rgba(108, 99, 255, 0.1);
+}
+
+.offers-all-toggle {
+  margin-top: 0.65rem;
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .plan-toolbar {
+    align-items: flex-start;
+  }
+
+  .selector-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+
+  .sidebar {
+    display: contents;
+  }
+
+  .price-card {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .chart-section {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .stats-card {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .summary-section {
+    order: 1;
+  }
+
+  .analytics-grid .chart-section {
+    order: 2;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 769px) {
+  .app-header {
+    position: sticky;
+    top: 0;
+    padding: 0.875rem 1.5rem;
+  }
+
+  .header-brand h1 {
+    font-size: 1.25rem;
+  }
+
+  .plan-selector {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 2rem;
+    padding: 1rem 1.5rem;
+    overflow-x: auto;
+  }
+
+  .selector-heading {
+    flex: 1 0 100%;
+  }
+
+  .tier-group {
+    flex-shrink: 0;
+  }
+
+  .duration-tabs {
+    flex-wrap: nowrap;
+  }
+
+  .main-content {
+    padding: 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .plan-toolbar {
+    padding-inline: 1.5rem;
+  }
+
+  .analytics-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    gap: 1.5rem;
+  }
+
+  .content-grid {
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .sidebar {
+    gap: 1.5rem;
+  }
+
+  .card-header {
+    padding: 0.875rem 1.25rem;
+    font-size: 0.875rem;
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+
+  .price-card .price-main {
+    font-size: 3rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+  }
+
+  .chart-container,
+  .no-chart-data {
+    height: 380px;
+  }
+
+  .chart-section .card,
+  .summary-section .card {
+    height: auto;
+  }
+
+  .summary-section .card-body {
+    padding: 1rem 1.1rem;
+  }
+
+  .toast-container {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    left: auto;
+  }
+
+  .toast {
+    max-width: 360px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .content-grid {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1101px) {
+  .main-content {
+    max-width: 1360px;
+  }
+
+  .analytics-grid {
+    grid-template-columns: minmax(0, 68fr) minmax(360px, 32fr);
+  }
 }

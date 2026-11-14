@@ -15,6 +15,7 @@ from app.services.pricing_service import (
     get_plan_offers,
     get_offer_history,
     calculate_effective_price,
+    calculate_effective_monthly_cost,
 )
 from app.services.statistics_service import compute_statistics
 from app.scraper.cultfit import CultFitScraper
@@ -118,6 +119,10 @@ def api_plan_offers(plan_id: int, status: Optional[str] = Query("available")):
     effective = calculate_effective_price(
         price["selling_price"] if price else None,
         offers,
+    )
+    effective["effective_monthly_cost"] = calculate_effective_monthly_cost(
+        effective,
+        plan.duration_months,
     )
     return {"offers": offers, "effective_price": effective}
 

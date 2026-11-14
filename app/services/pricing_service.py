@@ -14,6 +14,37 @@ logger = logging.getLogger(__name__)
 _TIER_ORDER = {"ELITE": 0, "ELITE PLUS": 1, "PRO": 2, "PRO PLUS": 3, "PLAY": 4}
 
 
+def calculate_monthly_cost(
+    selling_price: Optional[float],
+    duration_months: Optional[int],
+) -> Optional[float]:
+    """Return a duration-derived monthly price, or None for invalid inputs."""
+    try:
+        duration = int(duration_months or 0)
+        price = float(selling_price)
+    except (TypeError, ValueError):
+        return None
+    if duration <= 0 or price < 0:
+        return None
+    return round(price / duration, 2)
+
+
+def calculate_effective_monthly_cost(
+    effective_price: dict,
+    duration_months: Optional[int],
+) -> Optional[float]:
+    """Calculate monthly cost after explicit upfront instant discounts only."""
+    advertised = effective_price.get("advertised_price")
+    instant_discount = effective_price.get("instant_discount", 0.0)
+    if advertised is None:
+        return None
+    try:
+        adjusted_price = max(0.0, float(advertised) - float(instant_discount or 0))
+    except (TypeError, ValueError):
+        return None
+    return calculate_monthly_cost(adjusted_price, duration_months)
+
+
 def get_latest_prices(conn: sqlite3.Connection, product_id: int) -> list[dict]:
     """
     Return the latest price observation for every plan belonging to *product_id*.
@@ -48,6 +79,11 @@ def get_latest_prices(conn: sqlite3.Connection, product_id: int) -> list[dict]:
     ).fetchall()
 
     results = [dict(r) for r in rows]
+    for result in results:
+        result["monthly_cost"] = calculate_monthly_cost(
+            result.get("selling_price"),
+            result.get("duration_months"),
+        )
     # Sort by tier display order then duration
     results.sort(
         key=lambda r: (_TIER_ORDER.get(r.get("tier", ""), 99), r.get("duration_months", 0))
@@ -66,7 +102,13 @@ def get_plan_history(
     days:
         When provided, restrict to observations within the last *days* days.
     """
-    return list_observations_for_plan(conn, plan_id, days=days)
+    observations = list_observations_for_plan(conn, plan_id, days=days)
+    for observation in observations:
+        observation["monthly_cost"] = calculate_monthly_cost(
+            observation.get("selling_price"),
+            observation.get("duration_months"),
+        )
+    return observations
 
 
 def get_plan_offers(
@@ -89,11 +131,11 @@ def calculate_effective_price(
     selling_price: Optional[float],
     offers: list[dict],
 ) -> dict:
-    """Separate immediate, conditional, and cashback benefits.
+    """Separate verified upfront discounts from conditional benefits.
 
-    Only immediate and conditional discounts reduce the potential purchase
-    price. Cashback is reported separately because it is not an upfront price
-    reduction.
+    Coupon offers are not automatically applied because their eligibility and
+    applicability cannot be verified from the offer record alone. Cashback and
+    non-monetary benefits are reported separately and do not reduce price.
     """
     if selling_price is None:
         return {
@@ -102,12 +144,20 @@ def calculate_effective_price(
             "conditional_discount": 0.0,
             "cashback": 0.0,
             "potential_effective_price": None,
+            "instant_discounted_price": None,
+            "excluded_benefit_count": 0,
         }
 
     instant = conditional = cashback = 0.0
+    excluded_benefit_count = 0
     for offer in offers:
+        category = (offer.get("category") or "").lower()
+        if category == "coupon":
+            excluded_benefit_count += 1
+            continue
         value = offer.get("discount_value")
         if value is None:
+            excluded_benefit_count += 1
             continue
         value = float(value)
         if offer.get("discount_type") == "percentage":
@@ -115,22 +165,25 @@ def calculate_effective_price(
         maximum = offer.get("maximum_discount")
         if maximum is not None:
             value = min(value, float(maximum))
-        category = (offer.get("category") or "").lower()
         if category == "cashback":
             cashback += value
         elif category == "instant discount" or offer.get("is_conditional") is False:
             instant += value
         elif offer.get("is_conditional"):
             conditional += value
+        else:
+            excluded_benefit_count += 1
 
     return {
         "advertised_price": selling_price,
         "instant_discount": round(instant, 2),
         "conditional_discount": round(conditional, 2),
         "cashback": round(cashback, 2),
+        "instant_discounted_price": round(max(0.0, selling_price - instant), 2),
         "potential_effective_price": round(
             max(0.0, selling_price - instant - conditional), 2
         ),
+        "excluded_benefit_count": excluded_benefit_count,
     }
 
 

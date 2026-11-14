@@ -9,6 +9,18 @@
     <span class="brand-icon">📊</span>
     <h1>Cult.fit Price Tracker</h1>
   </div>
+  <div class="header-plan">
+    <span class="eyebrow">Tracking</span>
+    <strong id="selectedPlanLabel">
+      {{ selected_plan.name if selected_plan else 'No plan selected' }}
+      {% if selected_plan %} · {{ selected_plan.duration_label }}{% endif %}
+    </strong>
+    <button id="changePlanBtn" class="change-plan-btn" type="button"
+            aria-expanded="false" aria-controls="planSelectorPanel"
+            onclick="togglePlanSelector()">
+      Change plan
+    </button>
+  </div>
   <div class="header-meta">
     <span class="last-scraped">Last scraped: {{ last_scrape.completed_at | format_dt if last_scrape else 'Never' }}</span>
     <span class="status-badge status-{{ last_scrape.status if last_scrape else 'never' }}">
@@ -20,10 +32,14 @@
   </div>
 </header>
 
-<section class="plan-selector">
+<section id="planSelectorPanel" class="plan-selector" hidden>
+  <div class="selector-heading">
+    <span>Choose another plan</span>
+    <span class="text-muted">Select a duration to update the dashboard.</span>
+  </div>
   {% for tier, tier_plans in plans_by_tier.items() %}
-  <div class="tier-group" data-tier="{{ tier }}">
-    <div class="tier-label {{ tier|lower }}">{{ tier }}</div>
+  <div class="tier-group" data-tier="{{ tier|lower|replace(' ', '-') }}">
+    <div class="tier-label {{ tier|lower|replace(' ', '-') }}">{{ tier }}</div>
     <div class="duration-tabs">
       {% for plan in tier_plans %}
       <button class="tab-btn {% if plan.id == selected_plan_id %}active{% endif %}"
@@ -38,15 +54,20 @@
 </section>
 
 <main class="main-content">
-  <div class="content-grid">
-    <aside class="sidebar">
-      {% include "components/product_price_card.html" %}
-      {% include "components/price_statistics.html" %}
-    </aside>
+  <section class="kpi-section" aria-label="Price summary">
+    {% include "components/price_statistics.html" %}
+  </section>
+
+  <section class="analytics-grid" aria-label="Price analytics">
     <section class="chart-section">
       {% include "components/price_history_chart.html" %}
     </section>
-  </div>
+    <aside class="summary-section">
+      {% include "components/product_price_card.html" %}
+    </aside>
+  </section>
+
+  {% include "components/available_offers.html" %}
   {% include "components/price_observation_table.html" %}
   {% include "components/offer_history_table.html" %}
 </main>

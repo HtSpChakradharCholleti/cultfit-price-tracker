@@ -104,7 +104,7 @@ def list_observations_for_plan(
             SELECT po.id, po.membership_plan_id, po.original_price, po.selling_price,
                    po.discount_percentage, po.offer_description, po.raw_data,
                    po.observed_at,
-                   mp.name AS plan_name, mp.tier
+                   mp.name AS plan_name, mp.tier, mp.duration_months
             FROM price_observations po
             JOIN membership_plans mp ON mp.id = po.membership_plan_id
             WHERE po.membership_plan_id = ? AND po.observed_at >= ?
@@ -118,7 +118,7 @@ def list_observations_for_plan(
             SELECT po.id, po.membership_plan_id, po.original_price, po.selling_price,
                    po.discount_percentage, po.offer_description, po.raw_data,
                    po.observed_at,
-                   mp.name AS plan_name, mp.tier
+                   mp.name AS plan_name, mp.tier, mp.duration_months
             FROM price_observations po
             JOIN membership_plans mp ON mp.id = po.membership_plan_id
             WHERE po.membership_plan_id = ?

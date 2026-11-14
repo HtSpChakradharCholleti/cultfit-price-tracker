@@ -19,6 +19,7 @@ from app.services.pricing_service import (
     get_plan_offers,
     get_offer_history,
     calculate_effective_price,
+    calculate_effective_monthly_cost,
 )
 from app.services.statistics_service import compute_statistics
 
@@ -54,6 +55,24 @@ def format_inr(value) -> str:
         return str(value)
 
 
+def format_inr_decimal(value) -> str:
+    """Format a numeric value as Indian currency with two decimal places."""
+    if value is None:
+        return "—"
+    try:
+        numeric = float(value)
+        sign = "-" if numeric < 0 else ""
+        absolute = abs(numeric)
+        whole = int(absolute)
+        paise = int(round((absolute - whole) * 100))
+        if paise == 100:
+            whole += 1
+            paise = 0
+        return f"{sign}{format_inr(whole)}.{paise:02d}"
+    except (ValueError, TypeError):
+        return str(value)
+
+
 def format_dt(value) -> str:
     """Format UTC datetime / ISO string to Asia/Kolkata readable string."""
     if not value:
@@ -70,6 +89,7 @@ def format_dt(value) -> str:
 
 
 templates.env.filters["format_inr"] = format_inr
+templates.env.filters["format_inr_decimal"] = format_inr_decimal
 templates.env.filters["format_dt"] = format_dt
 
 
@@ -83,6 +103,14 @@ def _group_plans_by_tier(plans: list) -> dict[str, list]:
     for plan in plans:
         grouped.setdefault(plan.tier, []).append(plan)
     return grouped
+
+
+def _default_plan_id(plans: list) -> Optional[int]:
+    """Prefer the primary Elite 12 Months plan, then fall back to the first plan."""
+    for plan in plans:
+        if plan.tier.upper() == "ELITE" and plan.duration_months == 12:
+            return plan.id
+    return plans[0].id if plans else None
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +152,7 @@ def dashboard(
             # Determine which plan to show detail for
             selected_plan_id = plan_id
             if selected_plan_id is None and plans:
-                selected_plan_id = plans[0].id
+                selected_plan_id = _default_plan_id(plans)
 
             if selected_plan_id is not None:
                 selected_plan = get_plan(conn, selected_plan_id)
@@ -142,6 +170,10 @@ def dashboard(
                         selected_price["selling_price"]
                         if selected_price else None,
                         selected_offers,
+                    )
+                    effective_price["effective_monthly_cost"] = calculate_effective_monthly_cost(
+                        effective_price,
+                        selected_plan.duration_months,
                     )
                     offer_history = get_offer_history(conn, selected_plan.id)
 

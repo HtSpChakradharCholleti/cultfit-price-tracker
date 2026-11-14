@@ -6,17 +6,17 @@
     </span>
   </div>
   <div class="card-body">
-    <div class="table-wrapper">
+    <p class="table-scroll-hint" id="observationsScrollHint">Scroll horizontally to see all columns.</p>
+    <div class="table-wrapper" tabindex="0" role="region" aria-label="Price observations" aria-describedby="observationsScrollHint">
       <table class="data-table" id="observationsTable">
         <thead>
           <tr>
-            <th data-sort="observed_at" class="sortable">Date/Time (IST) ↕</th>
-            <th data-sort="plan_name" class="sortable">Plan ↕</th>
-            <th data-sort="tier" class="sortable">Tier ↕</th>
-            <th data-sort="original_price" class="sortable">MRP ↕</th>
-            <th data-sort="selling_price" class="sortable">Selling Price ↕</th>
-            <th data-sort="discount_pct" class="sortable">Discount ↕</th>
-            <th>Price-plan offer summary</th>
+            <th data-sort="observed_at" class="sortable" tabindex="0">Date/Time (IST) ↓</th>
+            <th data-sort="original_price" class="sortable" tabindex="0">MRP</th>
+            <th data-sort="selling_price" class="sortable" tabindex="0">Selling Price</th>
+            <th data-sort="discount_percentage" class="sortable" tabindex="0">Discount</th>
+            <th data-sort="monthly_cost" class="sortable" tabindex="0">Monthly Cost</th>
+            <th>Offers</th>
           </tr>
         </thead>
         <tbody id="observationsBody">
@@ -24,18 +24,28 @@
           {% for obs in history %}
           <tr>
             <td>{{ obs.observed_at | format_dt }}</td>
-            <td>{{ obs.plan_name }}</td>
-            <td><span class="tier-badge tier-{{ obs.tier|lower }}">{{ obs.tier }}</span></td>
             <td>₹{{ obs.original_price | format_inr }}</td>
             <td class="price-cell {% if obs.is_low %}text-success{% elif obs.is_high %}text-danger{% else %}text-warning{% endif %}">
               ₹{{ obs.selling_price | format_inr }}
             </td>
             <td>{{ obs.discount_percentage | round(1) }}%</td>
-            <td class="offer-cell">{{ obs.offer_description or '—' }}</td>
+            <td class="monthly-cost-cell">
+              {% if obs.monthly_cost is not none %}₹{{ obs.monthly_cost | format_inr_decimal }}{% else %}—{% endif %}
+            </td>
+            <td class="offer-cell">
+              {% if obs.offer_description %}
+              <details class="offer-details">
+                <summary>1 offer</summary>
+                <span>{{ obs.offer_description }}</span>
+              </details>
+              {% else %}
+              <span class="offer-count-empty">0 offers</span>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
           {% else %}
-          <tr><td colspan="7" class="empty-state">No observations yet. Click Refresh Price to start tracking.</td></tr>
+          <tr><td colspan="6" class="empty-state">No observations yet. Click Refresh Price to start tracking.</td></tr>
           {% endif %}
         </tbody>
       </table>
