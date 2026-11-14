@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Cult.fit Price Tracker — Dashboard{% endblock %}
+
+{% block content %}
+
+<header class="app-header">
+  <div class="header-brand">
+    <span class="brand-icon">📊</span>
+    <h1>Cult.fit Price Tracker</h1>
+  </div>
+  <div class="header-meta">
+    <span class="last-scraped">Last scraped: {{ last_scrape.completed_at | format_dt if last_scrape else 'Never' }}</span>
+    <span class="status-badge status-{{ last_scrape.status if last_scrape else 'never' }}">
+      {{ last_scrape.status.upper() if last_scrape else 'NOT RUN' }}
+    </span>
+    <button id="refreshBtn" class="refresh-btn" onclick="triggerScrape()">
+      ↺ Refresh Price
+    </button>
+  </div>
+</header>
+
+<section class="plan-selector">
+  {% for tier, tier_plans in plans_by_tier.items() %}
+  <div class="tier-group" data-tier="{{ tier }}">
+    <div class="tier-label {{ tier|lower }}">{{ tier }}</div>
+    <div class="duration-tabs">
+      {% for plan in tier_plans %}
+      <button class="tab-btn {% if plan.id == selected_plan_id %}active{% endif %}"
+              data-plan-id="{{ plan.id }}"
+              onclick="selectPlan({{ plan.id }})">
+        {{ plan.duration_label }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+<main class="main-content">
+  <div class="content-grid">
+    <aside class="sidebar">
+      {% include "components/product_price_card.html" %}
+      {% include "components/price_statistics.html" %}
+    </aside>
+    <section class="chart-section">
+      {% include "components/price_history_chart.html" %}
+    </section>
+  </div>
+  {% include "components/price_observation_table.html" %}
+  {% include "components/offer_history_table.html" %}
+</main>
+
+<div id="toastContainer" class="toast-container"></div>
+<div id="loadingOverlay" class="loading-overlay" style="display:none">
+  <div class="spinner"></div>
+</div>
+
+<script>
+window.TRACKER_DATA = {
+  selectedPlanId: {{ selected_plan_id | tojson }},
+  plansJson: {{ plans | tojson }},
+  selectedOffers: {{ selected_offers | tojson }},
+  effectivePrice: {{ effective_price | tojson }},
+  offerHistory: {{ offer_history | tojson }},
+};
+</script>
+
+{% endblock %}

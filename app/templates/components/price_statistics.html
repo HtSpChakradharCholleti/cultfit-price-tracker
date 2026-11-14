@@ -1,0 +1,49 @@
+<div class="card stats-card" id="statsCard">
+  <div class="card-header">Historical Statistics</div>
+  <div class="card-body">
+    {% if statistics and statistics.has_sufficient_data %}
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-value text-success">₹{{ statistics.min_price | format_inr }}</div>
+        <div class="stat-label">All-time Low</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value text-danger">₹{{ statistics.max_price | format_inr }}</div>
+        <div class="stat-label">All-time High</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">₹{{ statistics.avg_price | format_inr }}</div>
+        <div class="stat-label">Historical Average</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value text-muted">{{ statistics.observation_count }}</div>
+        <div class="stat-label">Observations</div>
+      </div>
+      {% if statistics.vs_min_abs is not none %}
+      <div class="stat-item">
+        <div class="stat-value {% if statistics.vs_min_abs > 0 %}text-warning{% else %}text-success{% endif %}">
+          {% if statistics.vs_min_abs > 0 %}+{% endif %}₹{{ statistics.vs_min_abs | abs | format_inr }}
+        </div>
+        <div class="stat-label">vs Historical Low (₹)</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value {% if statistics.vs_min_pct > 0 %}text-warning{% else %}text-success{% endif %}">
+          {% if statistics.vs_min_pct > 0 %}+{% endif %}{{ statistics.vs_min_pct | round(1) }}%
+        </div>
+        <div class="stat-label">vs Historical Low (%)</div>
+      </div>
+      {% endif %}
+    </div>
+    {% elif statistics and statistics.observation_count == 1 %}
+    <div class="insufficient-data">
+      <span>📈</span>
+      <p>Only 1 observation. Collecting more data to show trends...</p>
+    </div>
+    {% else %}
+    <div class="insufficient-data">
+      <span>📊</span>
+      <p>No price data yet. Click Refresh Price to collect the first observation.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>

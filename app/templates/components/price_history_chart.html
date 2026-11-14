@@ -1,0 +1,20 @@
+<div class="card chart-card" id="chartCard">
+  <div class="card-header">
+    <span>Price History</span>
+    <div class="date-filter-btns">
+      <button class="filter-btn active" data-days="7">7D</button>
+      <button class="filter-btn" data-days="30">30D</button>
+      <button class="filter-btn" data-days="90">90D</button>
+      <button class="filter-btn" data-days="180">6M</button>
+      <button class="filter-btn" data-days="">All</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="chart-container" data-plan-id="{{ selected_plan.id if selected_plan else '' }}">
+      <canvas id="priceHistoryChart"></canvas>
+    </div>
+    <div id="chartNoData" class="no-chart-data" style="display:none">
+      No historical data yet. Prices will appear here after multiple scrapes.
+    </div>
+  </div>
+</div>

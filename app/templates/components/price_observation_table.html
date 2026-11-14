@@ -1,0 +1,44 @@
+<div class="card table-card" id="tableCard">
+  <div class="card-header">
+    <span>Price Observations</span>
+    <span class="text-muted" id="observationCount">
+      {%- if history %}{{ history | length }} records{% endif -%}
+    </span>
+  </div>
+  <div class="card-body">
+    <div class="table-wrapper">
+      <table class="data-table" id="observationsTable">
+        <thead>
+          <tr>
+            <th data-sort="observed_at" class="sortable">Date/Time (IST) ↕</th>
+            <th data-sort="plan_name" class="sortable">Plan ↕</th>
+            <th data-sort="tier" class="sortable">Tier ↕</th>
+            <th data-sort="original_price" class="sortable">MRP ↕</th>
+            <th data-sort="selling_price" class="sortable">Selling Price ↕</th>
+            <th data-sort="discount_pct" class="sortable">Discount ↕</th>
+            <th>Price-plan offer summary</th>
+          </tr>
+        </thead>
+        <tbody id="observationsBody">
+          {% if history %}
+          {% for obs in history %}
+          <tr>
+            <td>{{ obs.observed_at | format_dt }}</td>
+            <td>{{ obs.plan_name }}</td>
+            <td><span class="tier-badge tier-{{ obs.tier|lower }}">{{ obs.tier }}</span></td>
+            <td>₹{{ obs.original_price | format_inr }}</td>
+            <td class="price-cell {% if obs.is_low %}text-success{% elif obs.is_high %}text-danger{% else %}text-warning{% endif %}">
+              ₹{{ obs.selling_price | format_inr }}
+            </td>
+            <td>{{ obs.discount_percentage | round(1) }}%</td>
+            <td class="offer-cell">{{ obs.offer_description or '—' }}</td>
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr><td colspan="7" class="empty-state">No observations yet. Click Refresh Price to start tracking.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

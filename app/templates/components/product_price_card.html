@@ -1,0 +1,62 @@
+<div class="card price-card" id="priceCard">
+  <div class="card-header">
+    <span class="plan-name">{{ selected_plan.name if selected_plan else '—' }}</span>
+    <span class="tier-badge tier-{{ (selected_plan.tier|lower) if selected_plan else '' }}">
+      {{ selected_plan.tier if selected_plan else '' }}
+    </span>
+  </div>
+  <div class="card-body">
+    {% if selected_price %}
+    <div class="price-main">₹{{ selected_price.selling_price | format_inr }}</div>
+    {% if selected_price.original_price > selected_price.selling_price %}
+    <div class="price-mrp">MRP ₹{{ selected_price.original_price | format_inr }}</div>
+    {% endif %}
+    {% if selected_price.discount_percentage > 0 %}
+    <div class="discount-badge">{{ selected_price.discount_percentage | round(1) }}% OFF</div>
+    {% endif %}
+    {% if selected_price.offer_description %}
+    <div class="offer-text">🎁 {{ selected_price.offer_description }}</div>
+    {% endif %}
+    {% if effective_price %}
+    <div class="price-breakdown">
+      <div>Advertised price: ₹{{ effective_price.advertised_price | format_inr }}</div>
+      {% if effective_price.instant_discount %}
+      <div class="text-success">Instant discount: −₹{{ effective_price.instant_discount | format_inr }}</div>
+      {% endif %}
+      {% if effective_price.conditional_discount %}
+      <div class="text-warning">Conditional discount: −₹{{ effective_price.conditional_discount | format_inr }}</div>
+      {% endif %}
+      {% if effective_price.cashback %}
+      <div class="text-muted">Cashback: ₹{{ effective_price.cashback | format_inr }}</div>
+      {% endif %}
+      {% if effective_price.potential_effective_price is not none %}
+      <div class="price-effective">Potential effective price: ₹{{ effective_price.potential_effective_price | format_inr }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if selected_offers %}
+    <div class="offer-list">
+      {% for offer in selected_offers %}
+      <div class="offer-item">
+        <strong>{{ offer.title or 'Offer' }}</strong>
+        {% if offer.description and offer.description != offer.title %}
+        <span>{{ offer.description }}</span>
+        {% endif %}
+        {% if offer.coupon_code %}<code>{{ offer.coupon_code }}</code>{% endif %}
+        <small>{{ offer.category or 'Other' }}</small>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="observed-at text-muted">Last seen: {{ selected_price.observed_at | format_dt }}</div>
+    {% if statistics and statistics.min_price %}
+    <div class="hist-min text-muted">Historical low: ₹{{ statistics.min_price | format_inr }}</div>
+    {% if statistics.is_at_historical_low %}
+    <div class="hist-low-badge">🏆 Historical Low!</div>
+    {% endif %}
+    {% endif %}
+    {% else %}
+    <div class="no-data">No price data yet. Click Refresh Price.</div>
+    {% endif %}
+  </div>
+</div>
