@@ -8,7 +8,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from app.database import get_db
 from app.models.product import list_products
 from app.models.membership_plan import list_plans_for_product, get_plan
-from app.models.scrape_run import get_latest_run, list_runs, create_run, update_run, get_running_run
+from app.models.scrape_run import get_running_run
+from app.services.scrape_health import get_scrape_health
 from app.services.pricing_service import (
     get_plan_history,
     get_latest_prices,
@@ -18,9 +19,6 @@ from app.services.pricing_service import (
     calculate_effective_monthly_cost,
 )
 from app.services.statistics_service import compute_statistics
-from app.scraper.cultfit import CultFitScraper
-from app.models.product import get_or_create_product
-from app.config import BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -142,28 +140,9 @@ def api_plan_offer_history(plan_id: int, days: Optional[int] = Query(None)):
 
 def _run_scrape_job(db_path: str) -> None:
     """Background task: run a full scrape and persist observations."""
-    from app.database import get_db as _get_db
+    from app.scheduler import run_scrape_attempt
 
-    with _get_db(db_path) as conn:
-        run = create_run(conn)
-        try:
-            product = get_or_create_product(conn, "Cult.fit Elite", BASE_URL)
-            scraper = CultFitScraper()
-            result = scraper.scrape()
-
-            if not result.success:
-                update_run(conn, run.id, "failed", error_message=result.error)
-                return
-
-            summary = scraper.save_observations(conn, result, product.id)
-            logger.info("Scrape job summary: %s", summary)
-            update_run(conn, run.id, "success")
-        except Exception as exc:
-            logger.exception("Background scrape job failed: %s", exc)
-            try:
-                update_run(conn, run.id, "failed", error_message=str(exc))
-            except Exception:
-                pass
+    run_scrape_attempt(db_path)
 
 
 @router.post("/scraper/run/")
@@ -188,32 +167,7 @@ def api_trigger_scrape(background_tasks: BackgroundTasks):
 
 @router.get("/scraper/status/")
 def api_scraper_status():
-    """Return the latest ScrapeRun status."""
+    """Return current daily scrape health and the latest run details."""
     with get_db() as conn:
-        run = get_latest_run(conn)
-        all_runs = list_runs(conn, limit=5)
-
-    if run is None:
-        return {"status": "never_run", "run": None, "completed_at": None, "error_message": None}
-
-    return {
-        "status": run.status,
-        "completed_at": run.completed_at,
-        "error_message": run.error_message,
-        "run": {
-            "id": run.id,
-            "started_at": run.started_at,
-            "completed_at": run.completed_at,
-            "status": run.status,
-            "error_message": run.error_message,
-        },
-        "recent_runs": [
-            {
-                "id": r.id,
-                "started_at": r.started_at,
-                "completed_at": r.completed_at,
-                "status": r.status,
-            }
-            for r in all_runs
-        ],
-    }
+        health = get_scrape_health(conn)
+    return health

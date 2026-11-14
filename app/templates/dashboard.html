@@ -22,13 +22,32 @@
     </button>
   </div>
   <div class="header-meta">
-    <span class="last-scraped">Last scraped: {{ last_scrape.completed_at | format_dt if last_scrape else 'Never' }}</span>
-    <span class="status-badge status-{{ last_scrape.status if last_scrape else 'never' }}">
-      {{ last_scrape.status.upper() if last_scrape else 'NOT RUN' }}
+    <span class="last-scraped">Last scraped: {{ scrape_health.last_successful.completed_at | format_dt if scrape_health.last_successful else 'Never' }}</span>
+    <span class="status-badge status-{{ 'success' if scrape_health.today_state == 'complete' else 'running' if scrape_health.today_state == 'pending' else 'failed' }}">
+      {{ scrape_health.today_state|upper }}
     </span>
     <button id="refreshBtn" class="refresh-btn" onclick="triggerScrape()">
       ↺ Refresh Price
     </button>
+  </div>
+  <div id="scrapeHealth" class="scrape-health" aria-live="polite">
+    <div class="scrape-health-title">
+      <span class="health-dot status-{{ 'success' if scrape_health.today_state == 'complete' else 'running' if scrape_health.today_state == 'pending' else 'failed' }}"></span>
+      <strong id="scrapeHealthLabel">
+        Today's scrape: {{ scrape_health.today_state|upper }}
+      </strong>
+    </div>
+    <div class="scrape-health-details">
+      <span id="scrapeLastAttempt">
+        Last attempt: {{ scrape_health.last_attempt.started_at | format_dt if scrape_health.last_attempt else 'Never' }}
+      </span>
+      <span id="scrapeLastSuccess">
+        Last success: {{ scrape_health.last_successful.completed_at | format_dt if scrape_health.last_successful else 'Never' }}
+      </span>
+      <span id="scrapeNextRun">
+        Next run: {{ scrape_health.next_scheduled_run | format_dt }} IST
+      </span>
+    </div>
   </div>
 </header>
 

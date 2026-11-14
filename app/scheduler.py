@@ -7,47 +7,102 @@ APScheduler configuration for automatic price scraping.
 """
 
 import logging
+from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from zoneinfo import ZoneInfo
+from app import config
 
 from app.config import (
     BASE_URL,
-    DB_PATH,
     SCHEDULER_HOUR,
     SCHEDULER_MINUTE,
     SCHEDULER_TIMEZONE,
 )
 from app.database import get_db
 from app.models.product import get_or_create_product
-from app.models.scrape_run import create_run, update_run, get_running_run
+from app.models.scrape_run import (
+    acquire_run,
+    get_running_run,
+    list_runs_between,
+    update_run,
+)
 from app.scraper.cultfit import CultFitScraper
+from app.services.scrape_health import (
+    _utc_iso,
+    has_successful_scrape_today,
+    local_day_bounds,
+)
 
 logger = logging.getLogger(__name__)
 
 _scheduler = BackgroundScheduler(timezone=ZoneInfo(SCHEDULER_TIMEZONE))
+RETRY_DELAYS_MINUTES = (15, 30, 60)
 
 
-def run_scheduled_scrape() -> None:
-    """
-    Execute a scheduled scrape job.
+def _failed_attempt_count_today(db_path: str | None = None) -> int:
+    db_path = db_path or config.DB_PATH
+    day_start, day_end = local_day_bounds()
+    with get_db(db_path) as conn:
+        runs = list_runs_between(conn, _utc_iso(day_start), _utc_iso(day_end))
+    return sum(run.status == "failed" for run in runs)
 
-    1. Checks if another scrape is already running.
-    2. Logs a ScrapeRun entry in 'running' state.
-    3. Runs the CultFit scraper and saves any new observations.
-    4. Marks the run as 'success' or 'failed'.
-    """
-    logger.info("Starting scheduled Cult.fit price scrape...")
-    with get_db(DB_PATH) as conn:
-        running = get_running_run(conn)
-        if running is not None:
+
+def _schedule_retry(db_path: str | None = None) -> None:
+    db_path = db_path or config.DB_PATH
+    failed_attempts = _failed_attempt_count_today(db_path)
+    if failed_attempts > len(RETRY_DELAYS_MINUTES):
+        logger.error(
+            "Scrape retry limit reached for today after %d failed attempts.",
+            failed_attempts,
+        )
+        return
+
+    delay = RETRY_DELAYS_MINUTES[failed_attempts - 1]
+    timezone = ZoneInfo(SCHEDULER_TIMEZONE)
+    retry_number = failed_attempts
+    retry_date = datetime.now(timezone).date().isoformat()
+    run_date = datetime.now(timezone) + timedelta(minutes=delay)
+    job_id = f"cultfit-scrape-retry-{retry_date}-{retry_number}"
+    _scheduler.add_job(
+        run_scrape_attempt,
+        trigger="date",
+        run_date=run_date,
+        args=[db_path],
+        kwargs={"skip_if_success": True},
+        id=job_id,
+        name=f"Cult.fit scrape retry {retry_number}",
+        replace_existing=True,
+    )
+    logger.info(
+        "Scheduled scrape retry %d in %d minutes at %s.",
+        retry_number,
+        delay,
+        run_date.isoformat(),
+    )
+
+
+def run_scrape_attempt(
+    db_path: str | None = None,
+    skip_if_success: bool = False,
+) -> bool:
+    """Run one persisted scrape attempt and schedule a bounded retry on failure."""
+    db_path = db_path or config.DB_PATH
+    if skip_if_success:
+        with get_db(db_path) as conn:
+            if has_successful_scrape_today(conn):
+                logger.info("Today's scrape is already successful; skipping attempt.")
+                return True
+    logger.info("Starting Cult.fit price scrape attempt...")
+    run = None
+    success = False
+    with get_db(db_path) as conn:
+        run = acquire_run(conn)
+        if run is None:
             logger.warning(
-                "A scrape run is already in progress (run id=%s). Skipping scheduled execution.",
-                running.id,
+                "A scrape run is already in progress; skipping this execution.",
             )
-            return
-
-        run = create_run(conn)
+            return False
 
         try:
             product = get_or_create_product(conn, "Cult.fit Elite", BASE_URL)
@@ -57,18 +112,59 @@ def run_scheduled_scrape() -> None:
             if not result.success:
                 update_run(conn, run.id, "failed", error_message=result.error)
                 logger.error("Scheduled scrape failed: %s", result.error)
-                return
-
-            summary = scraper.save_observations(conn, result, product.id)
-            update_run(conn, run.id, "success")
-            logger.info("Scheduled scrape completed successfully: %s", summary)
+            else:
+                summary = scraper.save_observations(conn, result, product.id)
+                update_run(conn, run.id, "success")
+                success = True
+                logger.info("Scrape completed successfully: %s", summary)
 
         except Exception as exc:
             logger.exception("Unexpected error in scheduled scrape: %s", exc)
             try:
                 update_run(conn, run.id, "failed", error_message=str(exc))
             except Exception:
-                pass
+                logger.exception("Unable to record failed scrape attempt.")
+
+    if not success:
+        _schedule_retry(db_path)
+    return success
+
+
+def run_scheduled_scrape() -> None:
+    """Run the preferred 8 AM scrape unless today's scrape already succeeded."""
+    db_path = config.DB_PATH
+    with get_db(db_path) as conn:
+        if has_successful_scrape_today(conn):
+            logger.info("Today's scrape is already successful; skipping scheduled run.")
+            return
+    run_scrape_attempt(db_path, skip_if_success=True)
+
+
+def schedule_startup_catchup() -> bool:
+    """Schedule an immediate catch-up when today's local scrape is incomplete."""
+    db_path = config.DB_PATH
+    with get_db(db_path) as conn:
+        if has_successful_scrape_today(conn):
+            logger.info("Today's scrape is already successful; no startup catch-up needed.")
+            return False
+        if get_running_run(conn) is not None:
+            logger.info("A scrape is already running; startup catch-up is not needed.")
+            return False
+
+    timezone = ZoneInfo(SCHEDULER_TIMEZONE)
+    catchup_date = datetime.now(timezone).date().isoformat()
+    _scheduler.add_job(
+        run_scrape_attempt,
+        trigger="date",
+        run_date=datetime.now(timezone),
+        args=[db_path],
+        kwargs={"skip_if_success": True},
+        id=f"cultfit-startup-catchup-{catchup_date}",
+        name="Cult.fit startup catch-up scrape",
+        replace_existing=True,
+    )
+    logger.info("Scheduled startup catch-up scrape for %s.", catchup_date)
+    return True
 
 
 def setup_scheduler() -> BackgroundScheduler:

@@ -13,6 +13,7 @@ from app.database import get_db
 from app.models.product import list_products
 from app.models.membership_plan import list_plans_for_product, get_plan
 from app.models.scrape_run import get_latest_run
+from app.services.scrape_health import get_scrape_health
 from app.services.pricing_service import (
     get_latest_prices,
     get_plan_history,
@@ -178,6 +179,7 @@ def dashboard(
                     offer_history = get_offer_history(conn, selected_plan.id)
 
         last_scrape = get_latest_run(conn)
+        scrape_health = get_scrape_health(conn)
 
     # Convert plans to dicts for JSON serialization in template
     plans_dicts = [
@@ -202,6 +204,7 @@ def dashboard(
         "latest_prices_map": latest_prices_map,
         "latest_prices": latest_prices_map,
         "last_scrape": last_scrape,
+        "scrape_health": scrape_health,
         "selected_plan_id": selected_plan.id if selected_plan else None,
         "selected_plan": selected_plan,
         "selected_price": selected_price,

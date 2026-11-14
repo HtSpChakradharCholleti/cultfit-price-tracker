@@ -100,6 +100,66 @@ button {
   min-width: 0;
 }
 
+.scrape-health {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.45rem 0.65rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.scrape-health-title,
+.scrape-health-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.scrape-health-title {
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.scrape-health-details {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.health-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.health-dot.status-success {
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+}
+
+.health-dot.status-failed {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+}
+
+.health-dot.status-running {
+  background: var(--color-warning);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14);
+}
+
+.health-dot.status-not_run {
+  background: var(--text-muted);
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
+}
+
 .header-plan {
   display: flex;
   align-items: center;
@@ -1023,6 +1083,15 @@ th.sortable:focus-visible {
 }
 
 @media (min-width: 769px) {
+  .scrape-health {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .scrape-health-details {
+    justify-content: flex-start;
+  }
+
   .app-header {
     position: sticky;
     top: 0;

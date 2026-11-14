@@ -101,4 +101,8 @@ def test_api_scraper_status(client):
     assert resp.status_code == 200
     status = resp.json()
     assert status["status"] in ("success", "running", "never_run", "failed")
-    assert "run" in status
+    assert status["today_status"] == "success"
+    assert status["today_state"] == "complete"
+    assert status["today_last_attempt"]["status"] == "success"
+    assert status["last_successful"]["completed_at"] is not None
+    assert status["next_scheduled_run"]

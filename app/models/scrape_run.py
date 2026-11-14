@@ -44,6 +44,34 @@ def create_run(conn: sqlite3.Connection) -> ScrapeRun:
     )
 
 
+def acquire_run(conn: sqlite3.Connection) -> Optional[ScrapeRun]:
+    """Atomically acquire the SQLite-backed scrape lock and create a run."""
+    conn.execute("BEGIN IMMEDIATE")
+    running = conn.execute(
+        "SELECT id FROM scrape_runs WHERE status = 'running' LIMIT 1"
+    ).fetchone()
+    if running is not None:
+        conn.rollback()
+        return None
+
+    now = datetime.now(timezone.utc).isoformat()
+    cur = conn.execute(
+        """
+        INSERT INTO scrape_runs (started_at, status)
+        VALUES (?, 'running')
+        """,
+        (now,),
+    )
+    conn.commit()
+    return ScrapeRun(
+        id=cur.lastrowid,
+        started_at=now,
+        completed_at=None,
+        status="running",
+        error_message=None,
+    )
+
+
 def update_run(
     conn: sqlite3.Connection,
     run_id: int,
@@ -51,14 +79,17 @@ def update_run(
     error_message: Optional[str] = None,
 ) -> ScrapeRun:
     """Update status and completed_at of an existing ScrapeRun."""
+    if status not in ("running", "success", "failed"):
+        raise ValueError(f"Unsupported scrape run status: {status}")
     now = datetime.now(timezone.utc).isoformat()
+    completed_at = None if status == "running" else now
     conn.execute(
         """
         UPDATE scrape_runs
         SET status = ?, completed_at = ?, error_message = ?
         WHERE id = ?
         """,
-        (status, now, error_message, run_id),
+        (status, completed_at, error_message, run_id),
     )
     conn.commit()
     row = conn.execute(
@@ -81,6 +112,76 @@ def get_latest_run(conn: sqlite3.Connection) -> Optional[ScrapeRun]:
     if row is None:
         return None
     return ScrapeRun(**dict(row))
+
+
+def get_latest_successful_run(conn: sqlite3.Connection) -> Optional[ScrapeRun]:
+    """Return the most recent successfully completed scrape run."""
+    row = conn.execute(
+        """
+        SELECT id, started_at, completed_at, status, error_message
+        FROM scrape_runs
+        WHERE status = 'success'
+        ORDER BY completed_at DESC, started_at DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if row is None:
+        return None
+    return ScrapeRun(**dict(row))
+
+
+def list_runs_between(
+    conn: sqlite3.Connection,
+    started_at: str,
+    ended_at: str,
+) -> list[ScrapeRun]:
+    """Return runs whose start timestamp falls within [started_at, ended_at)."""
+    rows = conn.execute(
+        """
+        SELECT id, started_at, completed_at, status, error_message
+        FROM scrape_runs
+        WHERE started_at >= ? AND started_at < ?
+        ORDER BY started_at DESC
+        """,
+        (started_at, ended_at),
+    ).fetchall()
+    return [ScrapeRun(**dict(r)) for r in rows]
+
+
+def list_completed_runs_between(
+    conn: sqlite3.Connection,
+    completed_at: str,
+    ended_at: str,
+) -> list[ScrapeRun]:
+    """Return runs whose completion timestamp falls within [completed_at, ended_at)."""
+    rows = conn.execute(
+        """
+        SELECT id, started_at, completed_at, status, error_message
+        FROM scrape_runs
+        WHERE completed_at >= ? AND completed_at < ?
+        ORDER BY completed_at DESC, started_at DESC
+        """,
+        (completed_at, ended_at),
+    ).fetchall()
+    return [ScrapeRun(**dict(r)) for r in rows]
+
+
+def mark_running_runs_failed(
+    conn: sqlite3.Connection,
+    error_message: str = "Scrape interrupted by application restart.",
+) -> int:
+    """Finalize orphaned running rows left behind by a process restart."""
+    now = datetime.now(timezone.utc).isoformat()
+    cursor = conn.execute(
+        """
+        UPDATE scrape_runs
+        SET status = 'failed', completed_at = ?, error_message = ?
+        WHERE status = 'running'
+        """,
+        (now, error_message),
+    )
+    conn.commit()
+    return cursor.rowcount
 
 
 def list_runs(conn: sqlite3.Connection, limit: int = 20) -> list[ScrapeRun]:

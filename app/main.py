@@ -12,9 +12,10 @@ from fastapi.staticfiles import StaticFiles
 from app import config
 from app.database import checkpoint_db, get_db, init_db
 from app.models.product import get_or_create_product
+from app.models.scrape_run import mark_running_runs_failed
 from app.routes.api import router as api_router
 from app.routes.dashboard import router as dashboard_router
-from app.scheduler import setup_scheduler, shutdown_scheduler
+from app.scheduler import schedule_startup_catchup, setup_scheduler, shutdown_scheduler
 
 # Configure logging
 logging.basicConfig(
@@ -35,9 +36,13 @@ async def lifespan(app: FastAPI):
     # 2. Seed initial product record
     with get_db(config.DB_PATH) as conn:
         get_or_create_product(conn, "Cult.fit Elite", config.BASE_URL)
+        interrupted = mark_running_runs_failed(conn)
+        if interrupted:
+            logger.warning("Marked %d interrupted scrape run(s) as failed.", interrupted)
 
     # 3. Setup and start background scheduler
     setup_scheduler()
+    schedule_startup_catchup()
 
     logger.info("Cult.fit Price Tracker ready.")
     yield

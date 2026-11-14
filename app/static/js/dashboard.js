@@ -337,6 +337,7 @@ async function triggerScrape() {
   } catch (err) {
     console.error('triggerScrape error:', err);
     showToast(`Scrape failed: ${err.message}`, 'error');
+    refreshScraperMeta();
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -379,16 +380,52 @@ async function refreshScraperMeta() {
     const data = await resp.json();
 
     const scraped = document.querySelector('.last-scraped');
-    if (scraped && data.completed_at) {
-      scraped.textContent = `Last scraped: ${formatDateIST(data.completed_at)}`;
+    const latestCompleted = data.last_successful?.completed_at;
+    if (scraped && latestCompleted) {
+      scraped.textContent = `Last scraped: ${formatDateIST(latestCompleted)}`;
     }
 
     const badge = document.querySelector('.status-badge');
-    if (badge && data.status) {
-      badge.className = `status-badge status-${data.status}`;
-      badge.textContent = data.status.toUpperCase();
+    if (badge && data.today_state) {
+      const badgeStatus = data.today_state === 'complete'
+        ? 'success'
+        : data.today_state === 'pending' ? 'running' : 'failed';
+      badge.className = `status-badge status-${badgeStatus}`;
+      badge.textContent = data.today_state.toUpperCase();
     }
+    updateScrapeHealth(data);
   } catch (_) {}
+}
+
+function updateScrapeHealth(data) {
+  const label = document.getElementById('scrapeHealthLabel');
+  const dot = document.querySelector('#scrapeHealth .health-dot');
+  const lastAttempt = document.getElementById('scrapeLastAttempt');
+  const lastSuccess = document.getElementById('scrapeLastSuccess');
+  const nextRun = document.getElementById('scrapeNextRun');
+  if (!label || !dot) return;
+
+  const state = data.today_state || 'pending';
+  const dotStatus = state === 'complete' ? 'success' : state === 'pending' ? 'running' : 'failed';
+  label.textContent = `Today's scrape: ${state.toUpperCase()}`;
+  dot.className = `health-dot status-${dotStatus}`;
+  if (lastAttempt) {
+    lastAttempt.textContent = `Last attempt: ${
+      data.last_attempt?.started_at
+        ? formatDateIST(data.last_attempt.started_at)
+        : 'Never'
+    }`;
+  }
+  if (lastSuccess) {
+    lastSuccess.textContent = `Last success: ${
+      data.last_successful?.completed_at
+        ? formatDateIST(data.last_successful.completed_at)
+        : 'Never'
+    }`;
+  }
+  if (nextRun && data.next_scheduled_run) {
+    nextRun.textContent = `Next run: ${formatDateIST(data.next_scheduled_run)} IST`;
+  }
 }
 
 /* ------------------------------------------------------------------ */
