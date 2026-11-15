@@ -144,7 +144,8 @@ class CultFitScraper:
         For each plan:
         1. ``get_or_create`` the ``MembershipPlan`` row.
         2. Compare to the latest stored observation.
-        3. Insert a new ``PriceObservation`` only when something changed.
+        3. Insert a new ``PriceObservation`` even when the price is unchanged.
+        Commit all observations and offer updates before returning.
 
         Returns
         -------
@@ -152,6 +153,9 @@ class CultFitScraper:
         """
         new_count = 0
         unchanged_count = 0
+        if not result.success or not result.plans:
+            raise ValueError("Cannot persist a scrape without successfully retrieved plans")
+        observed_at = datetime.now(timezone.utc).isoformat()
 
         for plan_data in result.plans:
             # 1. Ensure plan row exists
@@ -162,6 +166,7 @@ class CultFitScraper:
                 duration_months=plan_data.duration_months,
                 tier=plan_data.tier,
                 sku=plan_data.product_id_code or None,
+                commit=False,
             )
 
             # 2. Check latest observation
@@ -176,7 +181,8 @@ class CultFitScraper:
 
             if not changed:
                 unchanged_count += 1
-                continue
+            else:
+                new_count += 1
 
             # 3. Persist new observation
             raw = {
@@ -192,9 +198,8 @@ class CultFitScraper:
                 discount_percentage=plan_data.discount_pct,
                 offer_description=plan_data.offer_string or None,
                 raw_data=raw,
+                observed_at=observed_at,
             )
-            conn.commit()
-            new_count += 1
             logger.debug(
                 "New observation for plan %r (id=%s): ₹%s → ₹%s",
                 plan_data.name, plan.id, plan_data.mrp, plan_data.selling_price,
@@ -210,6 +215,7 @@ class CultFitScraper:
                     duration_months=plan_data.duration_months,
                     tier=plan_data.tier,
                     sku=plan_data.product_id_code or None,
+                    commit=False,
                 )
                 sync_plan_offers(
                     conn,
@@ -218,6 +224,7 @@ class CultFitScraper:
                     observed_at=result.scraped_at.isoformat(),
                 )
 
+        conn.commit()
         summary = {
             "new": new_count,
             "unchanged": unchanged_count,

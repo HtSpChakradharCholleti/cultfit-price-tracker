@@ -148,8 +148,8 @@ def test_historical_immutability(db_conn):
     assert first["original_price"] == 19450.0
 
 
-def test_scraper_save_observations_avoids_duplicates(db_conn):
-    """Verify save_observations does not duplicate unchanged pricing records."""
+def test_scraper_save_observations_retains_unchanged_verifications(db_conn):
+    """Every successful retrieval retains an observation, including unchanged prices."""
     prod = insert_product(db_conn, "Cult.fit Elite", "https://next.cult.fit/sku/elite")
     scraper = CultFitScraper()
 
@@ -183,9 +183,13 @@ def test_scraper_save_observations_avoids_duplicates(db_conn):
     assert s2["new"] == 0
     assert s2["unchanged"] == 1
 
-    # Total observations should still be only 1
     all_obs = db_conn.execute("SELECT COUNT(*) FROM price_observations").fetchone()[0]
-    assert all_obs == 1
+    assert all_obs == 2
+    history = get_plan_history(
+        db_conn, db_conn.execute("SELECT id FROM membership_plans").fetchone()[0]
+    )
+    assert [row["selling_price"] for row in history] == [16950.0, 16950.0]
+    assert history[0]["observed_at"] < history[1]["observed_at"]
 
 
 def test_offer_history_tracks_changes_and_removals(db_conn):

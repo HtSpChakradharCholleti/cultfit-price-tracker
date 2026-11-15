@@ -98,6 +98,8 @@ def get_or_create_plan(
     duration_months: int,
     tier: str,
     sku: Optional[str] = None,
+    *,
+    commit: bool = True,
 ) -> MembershipPlan:
     """Return existing plan matching (product_id, tier, duration_months, name), or create it."""
     row = conn.execute(
@@ -111,7 +113,8 @@ def get_or_create_plan(
     if row:
         return MembershipPlan(**dict(row))
     plan = insert_plan(conn, product_id, name, duration_months, tier, sku)
-    conn.commit()
+    if commit:
+        conn.commit()
     logger.info(
         "Created plan %r tier=%s duration=%sm (id=%s)",
         name, tier, duration_months, plan.id,

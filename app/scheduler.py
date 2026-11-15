@@ -120,6 +120,7 @@ def run_scrape_attempt(
 
         except Exception as exc:
             logger.exception("Unexpected error in scheduled scrape: %s", exc)
+            conn.rollback()
             try:
                 update_run(conn, run.id, "failed", error_message=str(exc))
             except Exception:
