@@ -221,6 +221,29 @@ def test_offer_history_tracks_changes_and_removals(db_conn):
     assert [row["status"] for row in history] == ["available", "available", "removed"]
 
 
+def test_offer_history_omits_unchanged_snapshots_and_tracks_coupon_changes(db_conn):
+    prod = insert_product(db_conn, "Cult.fit Elite", "https://next.cult.fit/sku/elite")
+    plan = insert_plan(db_conn, prod.id, "Elite 12M", 12, "ELITE")
+    base = OfferData(
+        title="Bank offer",
+        description="Save on payment",
+        category="Coupon",
+        coupon_code="SAVE10",
+        discount_type="percentage",
+        discount_value=10,
+    )
+    updated = OfferData(**{**base.__dict__, "coupon_code": "SAVE15"})
+    sync_plan_offers(db_conn, plan.id, [base], "2026-11-01T08:00:00+00:00")
+    sync_plan_offers(db_conn, plan.id, [base], "2026-11-02T08:00:00+00:00")
+    sync_plan_offers(db_conn, plan.id, [updated], "2026-11-03T08:00:00+00:00")
+
+    history = list_offer_history(db_conn, plan.id)
+    assert [row["event_type"] for row in history] == [
+        "Offer introduced",
+        "Coupon code changed",
+    ]
+
+
 def test_effective_price_separates_discount_types():
     result = calculate_effective_price(
         16950,

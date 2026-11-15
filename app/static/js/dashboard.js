@@ -74,7 +74,7 @@ async function loadPlanData(planId, days = null) {
     _tableData = historyData || [];
 
     updatePriceCard(historyData, statsData, planId, offerData);
-    updateOffersPanel(offerData?.offers || []);
+    updateOffersPanel(offerData?.offers || [], offerData?.summary || {});
     updateStatsCard(statsData);
     initChart(historyData);
     renderTable(historyData, statsData);
@@ -116,13 +116,13 @@ function renderOfferHistory(historyData) {
   const count = document.getElementById('offerHistoryCount');
   if (!tbody) return;
   if (!historyData.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No offer observations yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No meaningful offer changes yet.</td></tr>';
     if (count) count.textContent = '';
     return;
   }
   tbody.innerHTML = historyData.map(offer => `<tr>
     <td>${formatDateIST(offer.observed_at)}</td>
-    <td>${escapeHtml(offer.status)}</td>
+    <td>${escapeHtml(offer.event_type || offer.status)}</td>
     <td>${escapeHtml(offer.category || 'Other')}</td>
     <td>${escapeHtml(offer.description || offer.title || '—')}</td>
     <td>${escapeHtml(offer.coupon_code || '—')}</td>
@@ -134,40 +134,41 @@ function renderOfferHistory(historyData) {
 /* 3. Price Card Update (dynamic, after plan switch)                     */
 /* ------------------------------------------------------------------ */
 function renderOfferItem(offer) {
-  const category = String(offer.category || 'Other').toLowerCase().replace(/\s+/g, '-');
+  const category = String(offer.category_group || 'Other benefits').toLowerCase().replace(/\s+/g, '-');
   let html = `<div class="offer-item" data-category="${escapeHtml(category)}"><strong>${escapeHtml(offer.title || 'Offer')}</strong>`;
-  if (offer.description && offer.description !== offer.title) {
-    html += `<span>${escapeHtml(offer.description)}</span>`;
-  }
+  html += `<span>${escapeHtml(offer.description || 'No description provided.')}</span>`;
+  html += `<small>${escapeHtml(offer.category_group || 'Other benefits')} · ${escapeHtml(offer.availability || 'available')}</small>`;
   if (offer.coupon_code) {
     html += `<code>${escapeHtml(offer.coupon_code)}</code>`;
   }
-  return `${html}<small>${escapeHtml(offer.category || 'Other')}</small></div>`;
+  return `${html}</div>`;
 }
 
-function updateOffersPanel(offers) {
+function updateOffersPanel(offers, summary = {}) {
   const body = document.getElementById('offersBody');
   const count = document.getElementById('offersCount');
   const sectionToggle = document.getElementById('offersSectionToggle');
   if (!body || !count || !sectionToggle) return;
 
-  count.textContent = offers.length ? `${offers.length} available` : '';
+  count.textContent = offers.length ? `${offers.length} current` : '';
   body.hidden = true;
   sectionToggle.setAttribute('aria-expanded', 'false');
   sectionToggle.textContent = 'Show offers';
 
   if (!offers.length) {
-    body.innerHTML = '<div class="no-data">No offers available for this plan.</div>';
+    body.innerHTML = '<div class="no-data">No current offers available for this plan.</div>';
     return;
   }
 
-  const preview = offers.slice(0, 3).map(renderOfferItem).join('');
-  const extra = offers.slice(3).map(renderOfferItem).join('');
+  const categorySummary = Object.entries(summary.counts || {})
+    .filter(([, value]) => value)
+    .map(([key, value]) => `<span>${escapeHtml(key)} <strong>${value}</strong></span>`)
+    .join('');
+  const verifiedAt = summary.verified_at ? formatDateIST(summary.verified_at) : 'Unknown';
   body.innerHTML = `
-    <div id="offerPreviewList" class="offer-list">${preview}</div>
-    ${extra ? `<div id="offerExtraList" class="offer-list" hidden>${extra}</div>
-      <button class="offers-all-toggle" type="button" aria-expanded="false"
-              onclick="toggleAllOffers(this)">View all ${offers.length} offers</button>` : ''}`;
+    <div id="offerCategorySummary" class="offer-category-summary">${categorySummary}</div>
+    <p class="offer-verification">Last verified: <span>${escapeHtml(verifiedAt)}</span></p>
+    <div id="offerList" class="offer-list">${offers.map(renderOfferItem).join('')}</div>`;
 }
 
 function toggleOffersSection(button) {

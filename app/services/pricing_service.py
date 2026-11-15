@@ -6,7 +6,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.models.price_observation import list_observations_for_plan
-from app.models.plan_offer import list_plan_offers, list_offer_history
+from app.models.plan_offer import (
+    get_latest_offer_verification,
+    list_offer_history,
+    list_plan_offers,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +121,25 @@ def get_plan_offers(
     status: Optional[str] = "available",
 ) -> list[dict]:
     return list_plan_offers(conn, plan_id, status=status)
+
+
+def get_offer_summary(
+    conn: sqlite3.Connection,
+    plan_id: int,
+) -> dict:
+    offers = get_plan_offers(conn, plan_id)
+    counts = {
+        "Instant discounts": 0,
+        "Coupons": 0,
+        "Other benefits": 0,
+        "EMI": 0,
+    }
+    for offer in offers:
+        counts[offer["category_group"]] += 1
+    return {
+        "counts": counts,
+        "verified_at": get_latest_offer_verification(conn, plan_id),
+    }
 
 
 def get_offer_history(

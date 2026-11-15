@@ -1,10 +1,10 @@
-<div class="card table-card" id="offerHistoryCard">
-  <div class="card-header">
+<details class="card table-card" id="offerHistoryCard">
+  <summary class="card-header">
     <span>Offer History</span>
     <span class="text-muted" id="offerHistoryCount">
-      {%- if offer_history %}{{ offer_history | length }} records{% endif -%}
+      {%- if offer_history %}{{ offer_history | length }} changes{% endif -%}
     </span>
-  </div>
+  </summary>
   <div class="card-body">
     <p class="table-scroll-hint" id="offersScrollHint">Scroll horizontally to see all columns.</p>
     <div class="table-wrapper" tabindex="0" role="region" aria-label="Offer history" aria-describedby="offersScrollHint">
@@ -12,7 +12,7 @@
         <thead>
           <tr>
             <th>Date/Time (IST)</th>
-            <th>Status</th>
+            <th>Change</th>
             <th>Category</th>
             <th>Offer</th>
             <th>Coupon</th>
@@ -22,16 +22,16 @@
           {% for offer in offer_history %}
           <tr>
             <td>{{ offer.observed_at | format_dt }}</td>
-            <td>{{ offer.status }}</td>
-            <td>{{ offer.category or 'Other' }}</td>
+            <td>{{ offer.event_type }}</td>
+            <td>{{ offer.category_group }}</td>
             <td>{{ offer.description or offer.title or '—' }}</td>
             <td>{{ offer.coupon_code or '—' }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="5" class="empty-state">No offer observations yet.</td></tr>
+          <tr><td colspan="5" class="empty-state">No meaningful offer changes yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
-</div>
+</details>

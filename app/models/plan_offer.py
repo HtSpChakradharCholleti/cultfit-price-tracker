@@ -47,9 +47,10 @@ class OfferData:
 
     def key(self) -> str:
         identity = {
+            "source_url": self.source_url,
             "title": self.title,
             "category": self.category,
-            "coupon_code": self.coupon_code,
+            "discount_type": self.discount_type,
         }
         return hashlib.sha256(
             json.dumps(identity, sort_keys=True, ensure_ascii=False).encode()
@@ -63,6 +64,17 @@ class PlanOffer:
     offer_key: str
     current_status: str
     fields: dict[str, Any]
+
+
+def offer_category_group(category: Optional[str]) -> str:
+    normalized = (category or "").strip().lower()
+    if normalized == "instant discount":
+        return "Instant discounts"
+    if normalized == "coupon":
+        return "Coupons"
+    if normalized == "emi":
+        return "EMI"
+    return "Other benefits"
 
 
 def _row_fields(row: sqlite3.Row) -> dict[str, Any]:
@@ -87,6 +99,17 @@ def _offer_from_row(row: sqlite3.Row) -> PlanOffer:
 
 def _changed(offer: PlanOffer, data: OfferData) -> bool:
     return offer.fields != data.normalized()
+
+
+def _identity_matches(offer: PlanOffer, data: OfferData) -> bool:
+    """Match legacy keys to the stable identity used by newer observations."""
+    if data.source_url and offer.fields.get("source_url"):
+        return data.source_url == offer.fields["source_url"]
+    return (
+        (offer.fields.get("title") or "") == (data.title or "")
+        and (offer.fields.get("category") or "") == (data.category or "")
+        and (offer.fields.get("discount_type") or "") == (data.discount_type or "")
+    )
 
 
 def sync_plan_offers(
@@ -117,6 +140,18 @@ def sync_plan_offers(
         key = data.key()
         seen_keys.add(key)
         current = existing.get(key)
+        if current is None:
+            current = next(
+                (offer for offer in existing.values() if _identity_matches(offer, data)),
+                None,
+            )
+            if current is not None and current.offer_key != key:
+                conn.execute(
+                    "UPDATE plan_offers SET offer_key=? WHERE id=?",
+                    (key, current.id),
+                )
+                existing.pop(current.offer_key, None)
+                existing[key] = current
         if current is None:
             cur = conn.execute(
                 """
@@ -230,7 +265,13 @@ def list_plan_offers(
         """,
         params,
     ).fetchall()
-    return [dict(row) for row in rows]
+    offers = []
+    for row in rows:
+        offer = dict(row)
+        offer["availability"] = offer["current_status"]
+        offer["category_group"] = offer_category_group(offer.get("category"))
+        offers.append(offer)
+    return offers
 
 
 def list_offer_history(
@@ -257,4 +298,56 @@ def list_offer_history(
         """,
         params,
     ).fetchall()
-    return [dict(row) for row in rows]
+    history: list[dict[str, Any]] = []
+    previous_by_offer: dict[int, dict[str, Any]] = {}
+    comparable_fields = (
+        "title", "description", "category", "coupon_code", "discount_type",
+        "discount_value", "maximum_discount", "minimum_transaction_amount",
+        "eligible_payment_methods", "validity_start", "validity_end",
+        "eligibility_conditions", "is_conditional", "is_stackable", "source_url",
+    )
+    for row in rows:
+        current = dict(row)
+        previous = previous_by_offer.get(current["offer_id"])
+        current_values = tuple(current.get(field) for field in comparable_fields)
+        previous_values = (
+            tuple(previous.get(field) for field in comparable_fields)
+            if previous else None
+        )
+        if previous is None:
+            current["event_type"] = "Offer introduced"
+        elif previous["status"] != current["status"]:
+            current["event_type"] = (
+                "Offer removed" if current["status"] == "removed"
+                else "Offer introduced" if current["status"] == "available"
+                else "Availability changed"
+            )
+        elif current["status"] == "available" and current_values != previous_values:
+            current["event_type"] = (
+                "Coupon code changed"
+                if current.get("coupon_code") != previous.get("coupon_code")
+                else "Offer description or value changed"
+            )
+        else:
+            previous_by_offer[current["offer_id"]] = current
+            continue
+        current["category_group"] = offer_category_group(current.get("category"))
+        history.append(current)
+        previous_by_offer[current["offer_id"]] = current
+    return history
+
+
+def get_latest_offer_verification(
+    conn: sqlite3.Connection,
+    membership_plan_id: int,
+) -> Optional[str]:
+    row = conn.execute(
+        """
+        SELECT MAX(oo.observed_at) AS verified_at
+        FROM offer_observations oo
+        JOIN plan_offers po ON po.id = oo.offer_id
+        WHERE po.membership_plan_id = ?
+        """,
+        (membership_plan_id,),
+    ).fetchone()
+    return row["verified_at"] if row else None

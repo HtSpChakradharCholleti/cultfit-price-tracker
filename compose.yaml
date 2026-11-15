@@ -1,0 +1,23 @@
+services:
+  cultfit-tracker:
+    build: .
+    container_name: cultfit-tracker
+    restart: unless-stopped
+    init: true
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    environment:
+      DB_PATH: /app/data/cultfit_prices.db
+      BASE_URL: https://next.cult.fit/sku/elite
+      SCRAPER_TIMEOUT: "30"
+      LOG_LEVEL: INFO
+      SCHEDULER_TIMEZONE: Asia/Kolkata
+      SCHEDULER_HOUR: "8"
+      SCHEDULER_MINUTE: "0"
+
+    volumes:
+      - ./data:/app/data
+
+    stop_grace_period: 30s

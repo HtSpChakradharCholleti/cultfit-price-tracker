@@ -14,6 +14,7 @@ from app.services.pricing_service import (
     get_plan_history,
     get_latest_prices,
     get_plan_offers,
+    get_offer_summary,
     get_offer_history,
     calculate_effective_price,
     calculate_effective_monthly_cost,
@@ -114,6 +115,7 @@ def api_plan_offers(plan_id: int, status: Optional[str] = Query("available")):
         price = next(
             (row for row in latest if row["plan_id"] == plan_id), None
         )
+        summary = get_offer_summary(conn, plan_id)
     effective = calculate_effective_price(
         price["selling_price"] if price else None,
         offers,
@@ -122,7 +124,11 @@ def api_plan_offers(plan_id: int, status: Optional[str] = Query("available")):
         effective,
         plan.duration_months,
     )
-    return {"offers": offers, "effective_price": effective}
+    return {
+        "offers": offers,
+        "effective_price": effective,
+        "summary": summary,
+    }
 
 
 @router.get("/plans/{plan_id}/offers/history/")

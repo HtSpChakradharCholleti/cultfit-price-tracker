@@ -18,6 +18,7 @@ from app.services.pricing_service import (
     get_latest_prices,
     get_plan_history,
     get_plan_offers,
+    get_offer_summary,
     get_offer_history,
     calculate_effective_price,
     calculate_effective_monthly_cost,
@@ -137,6 +138,7 @@ def dashboard(
         selected_offers: list[dict] = []
         effective_price: dict = {}
         offer_history: list[dict] = []
+        offer_summary: dict = {"counts": {}, "verified_at": None}
         history: list = []
         stats: dict = {}
 
@@ -167,6 +169,7 @@ def dashboard(
                         else None
                     )
                     selected_offers = get_plan_offers(conn, selected_plan.id)
+                    offer_summary = get_offer_summary(conn, selected_plan.id)
                     effective_price = calculate_effective_price(
                         selected_price["selling_price"]
                         if selected_price else None,
@@ -211,6 +214,7 @@ def dashboard(
         "selected_offers": selected_offers,
         "effective_price": effective_price,
         "offer_history": offer_history,
+        "offer_summary": offer_summary,
         "history": history,
         "stats": stats,
         "statistics": stats,

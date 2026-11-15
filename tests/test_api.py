@@ -95,6 +95,22 @@ def test_api_plan_statistics(client):
     assert stats["current_price"] > 0
 
 
+def test_api_plan_offers_includes_current_summary(client):
+    plan_id = client.get("/api/plans/").json()[0]["id"]
+
+    resp = client.get(f"/api/plans/{plan_id}/offers/")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["offers"] == []
+    assert set(data["summary"]["counts"]) == {
+        "Instant discounts",
+        "Coupons",
+        "Other benefits",
+        "EMI",
+    }
+
+
 def test_api_scraper_status(client):
     """Verify GET /api/scraper/status/ returns run details."""
     resp = client.get("/api/scraper/status/")

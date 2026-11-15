@@ -1,51 +1,37 @@
 <section class="card offers-card" id="offersCard">
   <div class="card-header">
-    <span>Available Offers</span>
+    <span>Current Offers</span>
     <div class="offers-header-meta">
       <span class="text-muted" id="offersCount">
-        {% if selected_offers %}{{ selected_offers | length }} available{% endif %}
+        {% if selected_offers %}{{ selected_offers | length }} current{% endif %}
       </span>
       <button id="offersSectionToggle" class="section-toggle" type="button"
               aria-expanded="false" aria-controls="offersBody"
               onclick="toggleOffersSection(this)">
-        Show offers
+        Show current offers
       </button>
     </div>
   </div>
   <div id="offersBody" class="offers-body" hidden>
     {% if selected_offers %}
-    <div id="offerPreviewList" class="offer-list">
-      {% for offer in selected_offers[:3] %}
-      <div class="offer-item" data-category="{{ (offer.category or 'Other')|lower|replace(' ', '-') }}">
+    <div id="offerCategorySummary" class="offer-category-summary">
+      {% for category, count in offer_summary.counts.items() if count %}
+      <span>{{ category }} <strong>{{ count }}</strong></span>
+      {% endfor %}
+    </div>
+    <p class="offer-verification">Last verified: <span id="offersVerifiedAt">{{ offer_summary.verified_at | format_dt if offer_summary.verified_at else 'Unknown' }}</span></p>
+    <div id="offerList" class="offer-list">
+      {% for offer in selected_offers %}
+      <div class="offer-item" data-category="{{ offer.category_group|lower|replace(' ', '-') }}">
         <strong>{{ offer.title or 'Offer' }}</strong>
-        {% if offer.description and offer.description != offer.title %}
-        <span>{{ offer.description }}</span>
-        {% endif %}
+        <span>{{ offer.description or 'No description provided.' }}</span>
+        <small>{{ offer.category_group }} · {{ offer.availability|capitalize }}</small>
         {% if offer.coupon_code %}<code>{{ offer.coupon_code }}</code>{% endif %}
-        <small>{{ offer.category or 'Other' }}</small>
       </div>
       {% endfor %}
     </div>
-    {% if selected_offers | length > 3 %}
-    <div id="offerExtraList" class="offer-list" hidden>
-      {% for offer in selected_offers[3:] %}
-      <div class="offer-item" data-category="{{ (offer.category or 'Other')|lower|replace(' ', '-') }}">
-        <strong>{{ offer.title or 'Offer' }}</strong>
-        {% if offer.description and offer.description != offer.title %}
-        <span>{{ offer.description }}</span>
-        {% endif %}
-        {% if offer.coupon_code %}<code>{{ offer.coupon_code }}</code>{% endif %}
-        <small>{{ offer.category or 'Other' }}</small>
-      </div>
-      {% endfor %}
-    </div>
-    <button class="offers-all-toggle" type="button" aria-expanded="false"
-            onclick="toggleAllOffers(this)">
-      View all {{ selected_offers | length }} offers
-    </button>
-    {% endif %}
     {% else %}
-    <div class="no-data">No offers available for this plan.</div>
+    <div class="no-data">No current offers available for this plan.</div>
     {% endif %}
   </div>
 </section>
