@@ -11,7 +11,7 @@
     {% if history|length > 1 %}
     {% set previous_price = history[-2] %}
     {% set price_delta = selected_price.selling_price - previous_price.selling_price %}
-    <div class="price-change {{ 'text-success' if price_delta < 0 else 'text-danger' if price_delta > 0 else 'text-muted' }}">
+    <div class="price-change text-muted">
       <span>Previous price: ₹{{ previous_price.selling_price | format_inr }}</span>
       {% if price_delta < 0 %}↓ ₹{{ price_delta | abs | format_inr }}{% elif price_delta > 0 %}↑ ₹{{ price_delta | format_inr }}{% else %}No change{% endif %}
     </div>
@@ -34,10 +34,10 @@
     <div class="price-breakdown">
       <div>Advertised price: ₹{{ effective_price.advertised_price | format_inr }}</div>
       {% if effective_price.instant_discount %}
-      <div class="text-success">Instant discount: −₹{{ effective_price.instant_discount | format_inr }}</div>
+      <div>Instant discount: −₹{{ effective_price.instant_discount | format_inr }}</div>
       {% endif %}
       {% if effective_price.conditional_discount %}
-      <div class="text-warning">Conditional discount: −₹{{ effective_price.conditional_discount | format_inr }}</div>
+      <div>Conditional discount: −₹{{ effective_price.conditional_discount | format_inr }}</div>
       {% endif %}
       {% if effective_price.cashback %}
       <div class="text-muted">Cashback: ₹{{ effective_price.cashback | format_inr }}</div>

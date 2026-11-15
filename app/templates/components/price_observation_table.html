@@ -25,7 +25,7 @@
           <tr>
             <td>{{ obs.observed_at | format_dt }}</td>
             <td>₹{{ obs.original_price | format_inr }}</td>
-            <td class="price-cell {% if obs.is_low %}text-success{% elif obs.is_high %}text-danger{% else %}text-warning{% endif %}">
+            <td class="price-cell">
               ₹{{ obs.selling_price | format_inr }}
             </td>
             <td>{{ obs.discount_percentage | round(1) }}%</td>

@@ -5,17 +5,17 @@
 
 /* ---------- CSS Custom Properties ---------- */
 :root {
-  --bg-primary: #0f1117;
-  --bg-surface: #1a1d2e;
-  --bg-elevated: #242840;
-  --color-primary: #6c63ff;
+  --bg-primary: #111318;
+  --bg-surface: #1A1D24;
+  --bg-elevated: #252A33;
+  --color-primary: #8296B0;
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
-  --text-primary: #e2e8f0;
-  --text-muted: #94a3b8;
-  --border: #2d3148;
-  --border-radius: 12px;
+  --text-primary: #D5D8DE;
+  --text-muted: #9299A5;
+  --border: #343A44;
+  --border-radius: 8px;
   --transition: 0.18s ease;
 }
 
@@ -39,6 +39,7 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
 }
 
 img, canvas {
@@ -83,10 +84,7 @@ button {
 .header-brand h1 {
   font-size: 1.375rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #a78bfa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -141,23 +139,19 @@ button {
 }
 
 .health-dot.status-success {
-  background: var(--color-success);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+  background: var(--color-primary);
 }
 
 .health-dot.status-failed {
   background: var(--color-danger);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
 }
 
 .health-dot.status-running {
   background: var(--color-warning);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14);
 }
 
 .health-dot.status-not_run {
   background: var(--text-muted);
-  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
 }
 
 .header-plan {
@@ -194,22 +188,21 @@ button {
   min-height: 44px;
   padding: 0.45rem 1rem;
   background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
+  color: var(--bg-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 600;
-  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  transition: background var(--transition), color var(--transition);
 }
 
 .refresh-btn:hover {
-  background: #5a52e0;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.4);
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .refresh-btn:active {
-  transform: translateY(0);
+  background: var(--bg-elevated);
 }
 
 .refresh-btn:disabled {
@@ -232,9 +225,9 @@ button {
 }
 
 .status-success {
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--color-success);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(130, 150, 176, 0.12);
+  color: var(--text-primary);
+  border-color: var(--border);
 }
 
 .status-failed {
@@ -291,7 +284,7 @@ button {
   flex: 0 0 auto;
   min-height: 44px;
   padding: 0.45rem 0.85rem;
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: transparent;
   color: var(--text-primary);
@@ -300,7 +293,8 @@ button {
 }
 
 .change-plan-btn:hover {
-  background: rgba(108, 99, 255, 0.12);
+  background: var(--bg-elevated);
+  border-color: var(--color-primary);
 }
 
 .plan-selector {
@@ -345,9 +339,9 @@ button {
   text-transform: uppercase;
 }
 
-.tier-label.elite { color: var(--color-warning); }
-.tier-label.pro   { color: var(--color-primary); }
-.tier-label.play  { color: var(--color-success); }
+.tier-label.elite,
+.tier-label.pro,
+.tier-label.play { color: var(--text-muted); }
 
 .duration-tabs {
   display: flex;
@@ -372,13 +366,13 @@ button {
 .tab-btn:hover {
   border-color: var(--color-primary);
   color: var(--text-primary);
-  background: rgba(108, 99, 255, 0.1);
+  background: rgba(130, 150, 176, 0.1);
 }
 
 .tab-btn.active {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff;
+  color: var(--bg-primary);
   font-weight: 600;
 }
 
@@ -478,7 +472,7 @@ button {
 .price-card .price-main {
   font-size: clamp(2rem, 8vw, 3rem);
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--text-primary);
   line-height: 1.1;
   margin-bottom: 0.4rem;
   letter-spacing: -0.02em;
@@ -491,7 +485,7 @@ button {
   gap: 0.35rem 0.75rem;
   margin: 0.15rem 0 0.75rem;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .price-change span {
@@ -516,10 +510,10 @@ button {
 .discount-badge {
   display: inline-block;
   padding: 0.2rem 0.6rem;
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--color-success);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
@@ -527,7 +521,7 @@ button {
 
 .offer-text {
   font-size: 0.82rem;
-  color: var(--color-warning);
+  color: var(--text-muted);
   font-style: italic;
   margin-bottom: 0.5rem;
   display: -webkit-box;
@@ -550,10 +544,10 @@ button {
   display: inline-block;
   margin-top: 0.5rem;
   padding: 0.2rem 0.65rem;
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--color-success);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -569,22 +563,12 @@ button {
   text-transform: uppercase;
 }
 
-.tier-elite {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--color-warning);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.tier-pro {
-  background: rgba(108, 99, 255, 0.15);
-  color: var(--color-primary);
-  border: 1px solid rgba(108, 99, 255, 0.3);
-}
-
+.tier-elite,
+.tier-pro,
 .tier-play {
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--color-success);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
 }
 
 /* ---------- Statistics Card ---------- */
@@ -600,11 +584,6 @@ button {
   background: var(--bg-elevated);
   border-radius: 8px;
   border: 1px solid var(--border);
-}
-
-.stat-current {
-  border-color: rgba(108, 99, 255, 0.55);
-  background: rgba(108, 99, 255, 0.1);
 }
 
 .stat-value {
@@ -682,7 +661,7 @@ button {
 .filter-btn.active {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff;
+  color: var(--bg-primary);
   font-weight: 600;
 }
 
@@ -714,7 +693,7 @@ button {
 .table-wrapper:focus-visible,
 button:focus-visible,
 th.sortable:focus-visible {
-  outline: 2px solid #a78bfa;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -768,7 +747,7 @@ th.sortable:focus-visible {
 }
 
 .data-table tbody tr:hover {
-  background: rgba(108, 99, 255, 0.05);
+  background: rgba(130, 150, 176, 0.05);
 }
 
 .data-table tbody tr:last-child td {
@@ -864,8 +843,7 @@ th.sortable:focus-visible {
   border-radius: 10px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #fff;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  color: var(--text-primary);
   animation: toastIn 0.25s ease forwards;
   min-width: 220px;
   max-width: 100%;
@@ -873,15 +851,15 @@ th.sortable:focus-visible {
 }
 
 .toast.success {
-  background: linear-gradient(135deg, #16a34a, #22c55e);
+  background: #26352d;
 }
 
 .toast.error {
-  background: linear-gradient(135deg, #b91c1c, #ef4444);
+  background: #3a282b;
 }
 
 .toast.info {
-  background: linear-gradient(135deg, #4338ca, #6c63ff);
+  background: var(--bg-elevated);
 }
 
 @keyframes toastIn {
@@ -898,8 +876,7 @@ th.sortable:focus-visible {
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 17, 23, 0.65);
-  backdrop-filter: blur(3px);
+  background: rgba(17, 19, 24, 0.72);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -946,14 +923,14 @@ th.sortable:focus-visible {
 
 .price-effective {
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--text-primary);
 }
 
 .effective-monthly-breakdown {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  color: #e2e8f0;
+  color: var(--text-primary);
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -973,26 +950,26 @@ th.sortable:focus-visible {
   flex-direction: column;
   gap: 0.15rem;
   padding: 0.5rem 0.65rem;
-  border-left: 2px solid #6c63ff;
-  background: rgba(108, 99, 255, 0.08);
+  border-left: 2px solid var(--border);
+  background: var(--bg-elevated);
   font-size: 0.85rem;
 }
 
 .offer-item[data-category*="instant"] {
-  border-left-color: var(--color-success);
+  border-left-color: var(--border);
 }
 
 .offer-item[data-category*="coupon"] {
-  border-left-color: var(--color-primary);
+  border-left-color: var(--border);
 }
 
 .offer-item[data-category*="emi"] {
-  border-left-color: var(--color-warning);
+  border-left-color: var(--border);
 }
 
 .offer-item span,
 .offer-item small {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .offer-category-summary {
@@ -1031,8 +1008,8 @@ th.sortable:focus-visible {
   max-width: 100%;
   overflow-wrap: anywhere;
   padding: 0.1rem 0.35rem;
-  color: #e2e8f0;
-  background: #2d3148;
+  color: var(--text-primary);
+  background: var(--bg-primary);
 }
 
 .offers-card {
@@ -1067,7 +1044,7 @@ th.sortable:focus-visible {
 
 .section-toggle:hover,
 .offers-all-toggle:hover {
-  background: rgba(108, 99, 255, 0.1);
+  background: rgba(130, 150, 176, 0.1);
 }
 
 .offers-all-toggle {

@@ -276,7 +276,7 @@ function updatePriceCard(historyData, stats, planId, offerData = {}) {
     : null;
   if (previous) {
     const delta = latest.selling_price - previous.selling_price;
-    const changeClass = delta < 0 ? 'text-success' : delta > 0 ? 'text-danger' : 'text-muted';
+    const changeClass = 'text-muted';
     const changeText = delta < 0
       ? `↓ ₹${formatINR(Math.abs(delta))}`
       : delta > 0
@@ -303,10 +303,10 @@ function updatePriceCard(historyData, stats, planId, offerData = {}) {
   if (effective) {
     html += '<div class="price-breakdown">';
     if (effective.instant_discount > 0) {
-      html += `<div class="text-success">Instant discount: −₹${formatINR(effective.instant_discount)}</div>`;
+      html += `<div>Instant discount: −₹${formatINR(effective.instant_discount)}</div>`;
     }
     if (effective.conditional_discount > 0) {
-      html += `<div class="text-warning">Conditional discount: −₹${formatINR(effective.conditional_discount)}</div>`;
+      html += `<div>Conditional discount: −₹${formatINR(effective.conditional_discount)}</div>`;
     }
     if (effective.cashback > 0) {
       html += `<div class="text-muted">Cashback: ₹${formatINR(effective.cashback)}</div>`;
@@ -508,23 +508,23 @@ function initChart(historyData) {
         {
           label: 'Selling Price',
           data: sellingPrices,
-          borderColor: '#6c63ff',
-          backgroundColor: 'rgba(108, 99, 255, 0.1)',
+          borderColor: '#8296B0',
+          backgroundColor: 'rgba(130, 150, 176, 0.08)',
           fill: true,
           tension: 0.3,
           pointRadius: 4,
           pointHoverRadius: 6,
-          pointBackgroundColor: '#6c63ff',
+          pointBackgroundColor: '#8296B0',
         },
         {
           label: 'MRP',
           data: mrpPrices,
-          borderColor: '#475569',
+          borderColor: '#5D6572',
           borderDash: [5, 5],
           fill: false,
           tension: 0.3,
           pointRadius: 2,
-          pointBackgroundColor: '#475569',
+          pointBackgroundColor: '#5D6572',
         },
       ],
     },
@@ -534,14 +534,14 @@ function initChart(historyData) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          labels: { color: '#e2e8f0', boxWidth: 20, font: { family: 'Inter', size: 12 } },
+          labels: { color: '#D5D8DE', boxWidth: 20, font: { family: 'Inter', size: 12 } },
         },
         tooltip: {
-          backgroundColor: '#1a1d2e',
-          borderColor: '#2d3148',
+          backgroundColor: '#1A1D24',
+          borderColor: '#343A44',
           borderWidth: 1,
-          titleColor: '#e2e8f0',
-          bodyColor: '#94a3b8',
+          titleColor: '#D5D8DE',
+          bodyColor: '#9299A5',
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ₹${formatINR(ctx.raw)}`,
           },
@@ -550,7 +550,7 @@ function initChart(historyData) {
       scales: {
         x: {
           ticks: {
-            color: '#94a3b8',
+            color: '#9299A5',
             font: { family: 'Inter', size: 11 },
             maxTicksLimit: mobileChart.matches ? 3 : 8,
             maxRotation: mobileChart.matches ? 0 : 50,
@@ -559,15 +559,15 @@ function initChart(historyData) {
               return mobileChart.matches ? label.split(',')[0] : label;
             },
           },
-          grid: { color: '#2d3148' },
+          grid: { color: '#343A44' },
         },
         y: {
           ticks: {
-            color: '#94a3b8',
+            color: '#9299A5',
             font: { family: 'Inter', size: 11 },
             callback: v => '₹' + formatINR(v),
           },
-          grid: { color: '#2d3148' },
+          grid: { color: '#343A44' },
         },
       },
     },
@@ -589,9 +589,6 @@ function renderTable(historyData, statistics) {
     return;
   }
 
-  const minPrice = statistics?.min_price;
-  const maxPrice = statistics?.max_price;
-
   // Sort
   const sorted = historyData.slice().sort((a, b) => {
     let aVal = a[_sortKey] ?? '';
@@ -606,14 +603,11 @@ function renderTable(historyData, statistics) {
   });
 
   tbody.innerHTML = sorted.map(obs => {
-    const isLow = minPrice != null && obs.selling_price <= minPrice * 1.02;
-    const isHigh = maxPrice != null && obs.selling_price >= maxPrice * 0.98;
-    const priceClass = isLow ? 'text-success' : isHigh ? 'text-danger' : 'text-warning';
     const monthlyCost = obs.monthly_cost ?? calculateMonthlyCost(obs.selling_price, obs.duration_months);
     return `<tr>
       <td>${formatDateIST(obs.observed_at)}</td>
       <td>₹${formatINR(obs.original_price)}</td>
-      <td class="price-cell selling-price ${priceClass}">₹${formatINR(obs.selling_price)}</td>
+      <td class="price-cell selling-price">₹${formatINR(obs.selling_price)}</td>
       <td>${(obs.discount_percentage || 0).toFixed(1)}%</td>
       <td class="monthly-cost-cell">${monthlyCost === null ? '—' : `₹${formatINRDecimal(monthlyCost)}`}</td>
       <td class="offer-cell">${renderObservationOffer(obs.offer_description)}</td>
@@ -679,20 +673,19 @@ function updateStatsCard(stats) {
     return;
   }
 
-  const vsMinAbsClass = (stats.vs_min_abs > 0) ? 'text-warning' : 'text-success';
   const vsMinAbsPrefix = stats.vs_min_abs > 0 ? '+' : '';
 
   let html = `<div class="stats-grid">
-    <div class="stat-item stat-current">
-      <div class="stat-value text-primary">₹${formatINR(stats.current_price)}</div>
+    <div class="stat-item">
+      <div class="stat-value">₹${formatINR(stats.current_price)}</div>
       <div class="stat-label">Current Price</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value text-success">₹${formatINR(stats.min_price)}</div>
+      <div class="stat-value">₹${formatINR(stats.min_price)}</div>
       <div class="stat-label">All-time Low</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value text-danger">₹${formatINR(stats.max_price)}</div>
+      <div class="stat-value">₹${formatINR(stats.max_price)}</div>
       <div class="stat-label">All-time High</div>
     </div>
     <div class="stat-item">
@@ -707,7 +700,7 @@ function updateStatsCard(stats) {
   if (stats.vs_min_abs != null) {
     html += `
     <div class="stat-item">
-      <div class="stat-value ${vsMinAbsClass}">${vsMinAbsPrefix}₹${formatINR(Math.abs(stats.vs_min_abs))}</div>
+      <div class="stat-value text-muted">${vsMinAbsPrefix}₹${formatINR(Math.abs(stats.vs_min_abs))}</div>
       <div class="stat-label">vs Historical Low (₹)</div>
     </div>`;
   }

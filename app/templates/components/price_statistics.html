@@ -3,16 +3,16 @@
   <div class="card-body">
     {% if statistics and statistics.has_sufficient_data %}
     <div class="stats-grid">
-      <div class="stat-item stat-current">
-        <div class="stat-value text-primary">₹{{ statistics.current_price | format_inr }}</div>
+      <div class="stat-item">
+        <div class="stat-value">₹{{ statistics.current_price | format_inr }}</div>
         <div class="stat-label">Current Price</div>
       </div>
       <div class="stat-item">
-        <div class="stat-value text-success">₹{{ statistics.min_price | format_inr }}</div>
+        <div class="stat-value">₹{{ statistics.min_price | format_inr }}</div>
         <div class="stat-label">All-time Low</div>
       </div>
       <div class="stat-item">
-        <div class="stat-value text-danger">₹{{ statistics.max_price | format_inr }}</div>
+        <div class="stat-value">₹{{ statistics.max_price | format_inr }}</div>
         <div class="stat-label">All-time High</div>
       </div>
       <div class="stat-item">
@@ -25,7 +25,7 @@
       </div>
       {% if statistics.vs_min_abs is not none %}
       <div class="stat-item">
-        <div class="stat-value {% if statistics.vs_min_abs > 0 %}text-warning{% else %}text-success{% endif %}">
+        <div class="stat-value text-muted">
           {% if statistics.vs_min_abs > 0 %}+{% endif %}₹{{ statistics.vs_min_abs | abs | format_inr }}
         </div>
         <div class="stat-label">vs Historical Low (₹)</div>
