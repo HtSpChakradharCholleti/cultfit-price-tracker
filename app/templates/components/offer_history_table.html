@@ -18,19 +18,7 @@
             <th>Coupon</th>
           </tr>
         </thead>
-        <tbody id="offerHistoryBody">
-          {% for offer in offer_history %}
-          <tr>
-            <td>{{ offer.observed_at | format_dt }}</td>
-            <td>{{ offer.event_type }}</td>
-            <td>{{ offer.category_group }}</td>
-            <td>{{ offer.description or offer.title or '—' }}</td>
-            <td>{{ offer.coupon_code or '—' }}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="5" class="empty-state">No meaningful offer changes yet.</td></tr>
-          {% endfor %}
-        </tbody>
+        <tbody id="offerHistoryBody"></tbody>
       </table>
     </div>
   </div>

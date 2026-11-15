@@ -775,6 +775,27 @@ th.sortable:focus-visible {
   border-bottom: none;
 }
 
+.data-table .offer-history-date-group th {
+  padding: 0.65rem 1rem 0.35rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  text-align: left;
+}
+
+.data-table .offer-history-date-group:not(:first-child) th {
+  border-top: 1rem solid var(--bg-primary);
+}
+
+.offer-history-date-group th span {
+  margin-left: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
 .price-cell {
   font-weight: 600;
 }

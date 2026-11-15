@@ -120,13 +120,51 @@ function renderOfferHistory(historyData) {
     if (count) count.textContent = '';
     return;
   }
-  tbody.innerHTML = historyData.map(offer => `<tr>
-    <td>${formatDateIST(offer.observed_at)}</td>
-    <td>${escapeHtml(offer.event_type || offer.status)}</td>
-    <td>${escapeHtml(offer.category || 'Other')}</td>
-    <td>${escapeHtml(offer.description || offer.title || '—')}</td>
-    <td>${escapeHtml(offer.coupon_code || '—')}</td>
-  </tr>`).join('');
+  const dateFormatter = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+  const dateKeyFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const groups = new Map();
+  historyData
+    .map((offer, index) => ({ offer, index, timestamp: new Date(offer.observed_at) }))
+    .sort((a, b) => {
+      const timestampOrder = b.timestamp - a.timestamp;
+      return timestampOrder || b.index - a.index;
+    })
+    .forEach(({ offer, timestamp }) => {
+      const dateKey = dateKeyFormatter.format(timestamp);
+      if (!groups.has(dateKey)) {
+        groups.set(dateKey, {
+          label: dateFormatter.format(timestamp),
+          records: [],
+        });
+      }
+      groups.get(dateKey).records.push(offer);
+    });
+
+  tbody.innerHTML = Array.from(groups.values()).map(group => `
+    <tr class="offer-history-date-group">
+      <th colspan="5" scope="rowgroup">${escapeHtml(group.label)}
+        <span>${group.records.length} ${group.records.length === 1 ? 'record' : 'records'}</span>
+      </th>
+    </tr>
+    ${group.records.map(offer => `<tr>
+      <td>${formatDateIST(offer.observed_at)}</td>
+      <td>${escapeHtml(offer.event_type || offer.status)}</td>
+      <td>${escapeHtml(offer.category_group || offer.category || 'Other')}</td>
+      <td>${escapeHtml(offer.description || offer.title || '—')}</td>
+      <td>${escapeHtml(offer.coupon_code || '—')}</td>
+    </tr>`).join('')}
+  `).join('');
   if (count) count.textContent = `${historyData.length} records`;
 }
 
@@ -825,6 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDateFilters();
   setupTableSorting();
   updateTableScrollHints();
+  renderOfferHistory(window.TRACKER_DATA?.offerHistory || []);
   window.addEventListener('resize', updateTableScrollHints);
   mobileChart.addEventListener('change', event => {
     if (!chartInstance) return;
